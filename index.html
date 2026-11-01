@@ -104,7 +104,7 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
 .basemaps button{all:unset;cursor:pointer;background:var(--panel);color:var(--muted);font:600 12px var(--f-display);letter-spacing:.03em;padding:6px 11px;box-shadow:var(--shadow)}
 .basemaps{display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:240px}
 .basemaps button:first-child{border-radius:7px 0 0 7px}
-.basemaps button:nth-child(3){border-radius:0 7px 7px 0}
+.basemaps button:last-of-type{border-radius:0 7px 7px 0}
 .basemaps button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 .basemaps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tilenote{flex-basis:100%;margin-top:6px;max-width:220px;background:var(--panel);color:var(--fg);font-size:12px;padding:6px 9px;border-radius:6px;box-shadow:var(--shadow)}
@@ -270,8 +270,6 @@ const BASEMAPS = {
               base: () => ESRI(isDark() ? "Canvas/World_Dark_Gray_Base" : "Canvas/World_Light_Gray_Base"),
               ref:  () => ESRI(isDark() ? "Canvas/World_Dark_Gray_Reference" : "Canvas/World_Light_Gray_Reference"),
               maxNative:16, credit:"Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, GIS user community" },
-  terrain:  { label:"Terrain", base: () => ESRI("World_Terrain_Base"), ref: () => ESRI("Reference/World_Boundaries_and_Places_Alternate"),
-              maxNative:13, credit:"Tiles &copy; Esri &mdash; Source: USGS, Esri, TANA, DeLorme, NPS" },
   satellite:{ label:"Satellite", base: () => ESRI("World_Imagery"), ref: () => ESRI("Reference/World_Boundaries_and_Places"),
               maxNative:18, credit:"Imagery &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, GIS User Community" }
 };
