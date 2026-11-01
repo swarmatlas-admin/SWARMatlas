@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SWARMatlas Data Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: tabbed dashboard for embedding. Header with tab bar; each tab is a single scrolling column of cards (summary first, detail below). */
+:root{
+  --bg:#f4f6f6; --panel:#ffffff; --fg:#17262b; --fg2:#3d4f54; --muted:#5b6b70; --line:#d9e0e1; --track:#eef2f2;
+  --accent:#0f6b6e; --accent-soft:#dcefee; --link:#0f6b6e; --shadow:0 1px 3px rgba(16,38,43,.08);
+  --seq0:#eef4fb; --seq1:#2a78d6; --bar:#2a78d6;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#6250d6; --cother:#8a979c;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",Arial,Helvetica,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --fg2:#bccacc; --muted:#93a4a8; --line:#273639; --track:#1c2a2e;
+  --accent:#5cc3c0; --accent-soft:#1c3638; --link:#5cc3c0; --shadow:none;
+  --seq0:#1a2a33; --seq1:#3987e5; --bar:#3987e5;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --cother:#6d7c80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --fg2:#bccacc; --muted:#93a4a8; --line:#273639; --track:#1c2a2e;
+  --accent:#5cc3c0; --accent-soft:#1c3638; --link:#5cc3c0; --shadow:none;
+  --seq0:#1a2a33; --seq1:#3987e5; --bar:#3987e5;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --cother:#6d7c80; color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body);margin:0}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:var(--panel)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;padding-block:10px 0;max-width:1180px;margin:0 auto}
+h1{font:600 19px/1.2 var(--f-display);margin:0;letter-spacing:.01em}
+.sub{color:var(--muted);font-size:12.5px}
+nav{display:flex;gap:2px;max-width:1180px;margin:0 auto;overflow-x:auto}
+nav a{all:unset;cursor:pointer;padding:10px 14px 9px;font:600 13.5px var(--f-display);letter-spacing:.03em;color:var(--muted);border-bottom:2.5px solid transparent;white-space:nowrap}
+nav a[aria-current="page"]{color:var(--fg);border-color:var(--accent)}
+nav a:hover{color:var(--fg)}
+nav a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+main{max-width:1180px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+section[hidden]{display:none}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.pie{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px}
+.pie svg{flex:none}
+.pie ul{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:13px;min-width:0;flex:1 1 130px}
+.pie li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;color:var(--fg2)}
+.pie li .v{font:500 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.pie .ctr{font:600 22px var(--f-display);fill:var(--fg)}
+.pie .ctrs{font:11px var(--f-body);fill:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0;box-shadow:var(--shadow)}
+.card h2{font:600 15px/1.3 var(--f-display);margin:0 0 2px;letter-spacing:.01em;text-wrap:balance}
+.card .cap{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+.lbl{font:600 11px var(--f-display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.tiles.t4{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+.tiles.t3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:640px){.tiles.t4{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.t3{grid-template-columns:1fr}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.tile b{display:block;font:600 30px/1.1 var(--f-display);font-variant-numeric:tabular-nums;margin-top:4px}
+.tile small{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px}
+
+/* horizontal bars */
+.hbars{display:grid;grid-template-columns:minmax(90px,max-content) 1fr auto;gap:6px 10px;align-items:center}
+.hbars .l{font-size:13px;color:var(--fg2);overflow-wrap:anywhere;display:flex;align-items:center;gap:8px}
+.flag{flex:none;width:20px;height:15px;border-radius:2px;box-shadow:0 0 0 1px var(--line);object-fit:cover}
+.flag.noflag{box-shadow:none}
+.hbars .t{height:20px;display:flex;gap:2px;min-width:0}
+.hbars .seg{height:100%;min-width:3px;border-radius:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font:600 11px var(--f-mono);font-variant-numeric:tabular-nums}
+.hbars .seg:last-child{border-radius:0 4px 4px 0}
+.hbars .v{font:500 12.5px var(--f-mono);color:var(--fg2);font-variant-numeric:tabular-nums;text-align:right}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 10px;font-size:12.5px;color:var(--fg2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;flex:none}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;margin-bottom:14px}
+.controls label{display:grid;gap:4px}
+select,input[type=search]{font:14px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+select:focus-visible,input:focus-visible,button:focus-visible,.sp:focus-visible,th button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:600 13px var(--f-body);background:var(--accent);color:var(--panel);border:0;border-radius:6px;padding:8px 14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+
+/* heatmap + data table */
+.scrollx{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;font-size:13px;width:100%}
+.heat th,.heat td{padding:6px 8px;text-align:center;border:2px solid var(--panel)}
+.heat th{font-weight:500;color:var(--fg2);font-size:12px;vertical-align:bottom}
+.heat th.rowh{text-align:left;white-space:nowrap}
+.heat td{font:500 12.5px var(--f-mono);font-variant-numeric:tabular-nums;min-width:44px;border-radius:4px}
+.heat td.tot,.heat th.tot{color:var(--muted);background:transparent}
+.data th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);padding:0;white-space:nowrap}
+.data th button{all:unset;cursor:pointer;display:block;padding:8px 10px}
+.data th button::after{content:"";margin-left:4px}
+.data th[aria-sort="ascending"] button::after{content:"▲"}
+.data th[aria-sort="descending"] button::after{content:"▼"}
+.data td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.data td.num{font:500 12.5px var(--f-mono);text-align:right;white-space:nowrap}
+.data tr:hover td{background:var(--track)}
+.tablewrap{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
+a{color:var(--link)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+
+/* species */
+.splayout{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+.splist{max-height:72vh;overflow:auto;padding:0}
+.splist .head{position:sticky;top:0;background:var(--panel);padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.sp{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.sp:hover{background:var(--track)}
+.sp[aria-selected="true"]{background:var(--accent-soft)}
+.sp i{font-style:italic}
+.sp small{display:block;color:var(--muted);font-size:12px}
+.sp .n{font:500 12px var(--f-mono);color:var(--muted)}
+.profile h2{font:600 22px/1.2 var(--f-display);margin:0}
+.profile .common{color:var(--fg2);font-size:15px;margin:2px 0 14px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 20px;margin:14px 0}
+.kv div p{margin:2px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12.5px}
+.chip b{font:500 11px var(--f-mono);color:var(--muted);margin-left:4px}
+.plist{margin:6px 0 0;padding-left:18px}
+.plist li{margin-bottom:4px}
+.empty{color:var(--muted);padding:14px}
+.note{color:var(--muted);font-size:12.5px}
+svg text{fill:var(--muted);font:11px var(--f-body)}
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-width:260px}
+.tip b{font-weight:600}
+.notice{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px auto;max-width:520px}
+@media (max-width:800px){ .splayout{grid-template-columns:1fr} .splist{max-height:40vh} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<header>
+  <div class="hrow">
+    <div><h1>SWARMatlas data explorer</h1><div class="sub" id="asof">Loading the catalogue…</div></div>
+  </div>
+  <nav aria-label="Explorer sections">
+    <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#explore" data-tab="explore">Explore</a>
+    <a href="#species" data-tab="species">Species</a>
+    <a href="#data" data-tab="data">Data</a>
+  </nav>
+</header>
+
+<main>
+  <div class="notice" id="notice" hidden>
+    <p id="noticeText" style="margin:0 0 10px"></p>
+    <label class="btn" for="filePick">Choose the three CSV files</label>
+    <input type="file" id="filePick" accept=".csv,text/csv" multiple hidden>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="tab-overview">
+    <div class="tiles t4" id="tiles"></div>
+    <div class="tiles t3" id="tiles2"></div>
+    <div class="grid g3">
+      <div class="card"><h2>Animal group</h2><p class="cap">Share of datasets in the atlas.</p><div id="ovGroup"></div></div>
+      <div class="card"><h2>Tracking method</h2><p class="cap">How the movement data were collected.</p><div id="ovMethod"></div></div>
+      <div class="card"><h2>Field and lab</h2><p class="cap">Where the data were collected.</p><div id="ovSetting"></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h2>Growth of the atlas</h2><p class="cap" id="growthCap">Datasets added over time.</p><div id="ovGrowth"></div></div>
+      <div class="card"><h2>Datasets by country</h2><p class="cap">Country of the contributor's institution.</p><div id="ovCountry"></div></div>
+    </div>
+  </section>
+
+  <!-- EXPLORE -->
+  <section id="tab-explore" hidden>
+    <div class="card">
+      <h2>Compare datasets</h2>
+      <p class="cap">Count datasets by one characteristic, optionally split by another. Hover over a segment for details.</p>
+      <div class="controls">
+        <label><span class="lbl">Count by</span><select id="xRow"></select></label>
+        <label><span class="lbl">Split by</span><select id="xCol"></select></label>
+        <label><span class="lbl">Animal group</span><select id="xFilter"></select></label>
+      </div>
+      <div id="xBars"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Distributions</h2>
+      <p class="cap">Each dot is one dataset. The scale is logarithmic, so each step is ten times the last. Hover for details.</p>
+      <div class="controls">
+        <label><span class="lbl">Measure</span><select id="dMeasure"></select></label>
+        <label><span class="lbl">Grouped by</span><select id="dGroup"></select></label>
+      </div>
+      <div id="dPlot"></div>
+      <p class="note" id="dNote"></p>
+    </div>
+  </section>
+
+  <!-- SPECIES -->
+  <section id="tab-species" hidden>
+    <div class="splayout">
+      <div class="card splist" id="spList">
+        <div class="head"><label class="lbl" for="spSearch">Find a species</label><input type="search" id="spSearch" placeholder="Scientific or common name"></div>
+        <div id="spRows"></div>
+      </div>
+      <div class="card profile" id="spProfile"></div>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section id="tab-data" hidden>
+    <div class="card">
+      <h2>All datasets</h2>
+      <p class="cap">Search, sort and download the SWARMatlas catalogue. The data themselves are shared on request; please cite the original papers.</p>
+      <div class="controls">
+        <label style="flex:1 1 240px"><span class="lbl">Search</span><input type="search" id="tSearch" placeholder="Species, place, person, paper…"></label>
+        <label><span class="lbl">Animal group</span><select id="tGroup"></select></label>
+        <label><span class="lbl">Setting</span><select id="tSetting"></select></label>
+        <button type="button" class="btn" id="tDownload">Download these rows (CSV)</button>
+      </div>
+      <p class="note" id="tCount"></p>
+      <div class="tablewrap"><table class="data" id="tTable"></table></div>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+(function(){
+"use strict";
+const FILES = { institutions:"institutions.csv", contributors:"contributors.csv", datasets:"datasets.csv" };
+const GROUPS = ["Fish","Bird","Mammal","Insect","Other invertebrate","Reptile","Amphibian","Other"];
+const NG = "Not given";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const s = String(v ?? "").trim(); return s === "" ? NaN : parseFloat(s.replace(",", ".")); };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = n => n.toLocaleString("en-GB");
+const plural = (n, w, p) => `${fmt(n)} ${n === 1 ? w : (p || w + "s")}`;
+const doiUrl = v => { v = String(v||"").trim(); if (/^https?:\/\//i.test(v)) return v; if (/^10\.\d{4,}\//.test(v)) return "https://doi.org/" + v; return ""; };
+
+/* Colour follows the category, in a fixed order. Animal groups get fixed slots; other variables use the order of the category list. */
+const SLOTS = ["--c1","--c2","--c3","--c4","--c5","--c6","--c7"];
+const groupColor = g => { const i = GROUPS.indexOf(g); return css(i >= 0 && i < 7 ? SLOTS[i] : "--cother"); };
+function colorMap(variable, cats){
+  if (variable === "group") return Object.fromEntries(cats.map(c => [c, groupColor(c)]));
+  const m = {}; let k = 0; cats.forEach(c => { m[c] = (c === NG || c === "Other" || k >= 7) ? css("--cother") : css(SLOTS[k++]); }); return m;
+}
+
+/* ---- Data ---- */
+let DS = [];
+const VARS = {
+  group:{ label:"Animal group", get:d => d.group },
+  method:{ label:"Tracking method", get:d => d.method || NG },
+  setting:{ label:"Setting", get:d => d.setting || NG },
+  medium:{ label:"Medium", get:d => d.medium || NG },
+  dims:{ label:"Dimensions", get:d => d.dims || NG },
+  source:{ label:"Source", get:d => d.source || NG },
+  permanence:{ label:"Permanent IDs", get:d => d.permanence || NG },
+  coords:{ label:"Coordinate system", get:d => d.coords || NG },
+  repo:{ label:"Data repository", get:d => d.repo || NG },
+  family:{ label:"Family", get:d => d.family || NG },
+  country:{ label:"Institution country", get:d => d.country || NG },
+};
+const MEASURES = {
+  hz:{ label:"Sampling frequency (Hz)", get:d => d.hz, unit:"Hz" },
+  n:{ label:"Individual tracks (n)", get:d => d.n, unit:"tracks" },
+  groupSize:{ label:"Group size", get:d => d.groupSize, unit:"individuals" },
+  dur:{ label:"Sampling duration (seconds)", get:d => d.dur, unit:"s" },
+};
+
+function rows(t){ return Papa.parse(t, { header:true, skipEmptyLines:"greedy" }).data.map(r => { const o = {}; for (const k in r) o[String(k).replace(/^﻿/,"").trim()] = typeof r[k] === "string" ? r[k].trim() : r[k]; return o; }); }
+function load(instT, conT, dsT){
+  const inst = new Map(rows(instT).filter(r => r.institution_id).map(r => [r.institution_id, r]));
+  const con = new Map(rows(conT).filter(r => r.contributor_id).map(r => [r.contributor_id, r]));
+  DS = rows(dsT).filter(r => r.dataset_id).map(r => {
+    const c = con.get(r.contributor_id), i = inst.get(r.institution_id) || (c && inst.get(c.institution_id));
+    return { id:r.dataset_id, title:r.title || r.dataset_id,
+      group: GROUPS.includes(r.taxon_group) ? r.taxon_group : (r.taxon_group ? "Other" : NG),
+      method:r.method, methodDetails:r.method_details, setting:r.data_setting, medium:r.medium, dims:r.dimensions, source:r.source_type,
+      permanence:r.permanence, coords:r.coordinate_system, repo:r.data_repository, family:r.family,
+      binomial:r.binomial_name || "", common:r.common_name || "",
+      n:num(r.n), groupSize:num(r.group_size), nGroups:num(r.n_groups), hz:num(r.sampling_frequency), dur:num(r.sampling_duration_s),
+      location:r.study_location || "", precision:r.location_precision || "",
+      contributor: c && c.name ? c.name : (c ? "Not shown publicly" : ""), contributorId: r.contributor_id || "",
+      institution: i ? i.name : "", country: i ? i.country : "",
+      citation:r.citation || "", publication:r.publication || "", paper:doiUrl(r.paper_doi), data:doiUrl(r.data_doi),
+      desc:r.description || "", uploaded:r.upload_date || "" };
+  });
+  const last = DS.map(d => d.uploaded).filter(Boolean).sort().pop();
+  $("asof").textContent = `${plural(DS.length,"dataset")} in the catalogue${last ? ` · last added ${new Date(last + "T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}` : ""}`;
+  initControls(); renderAll();
+}
+
+/* ---- Tooltip (shared) ---- */
+const tip = $("tip");
+function showTip(e, html){ tip.innerHTML = html; tip.hidden = false; moveTip(e); }
+function moveTip(e){ const x = e.clientX ?? (e.target.getBoundingClientRect().right), y = e.clientY ?? e.target.getBoundingClientRect().top;
+  const w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = Math.min(innerWidth - w - 8, x + 14) + "px"; tip.style.top = Math.max(8, y - h - 10) + "px"; }
+document.addEventListener("pointerover", e => { const t = e.target.closest("[data-tip]"); if (t) showTip(e, t.dataset.tip); });
+document.addEventListener("pointermove", e => { if (!tip.hidden && e.target.closest("[data-tip]")) moveTip(e); });
+document.addEventListener("pointerout", e => { if (e.target.closest("[data-tip]")) tip.hidden = true; });
+document.addEventListener("focusin", e => { const t = e.target.closest("[data-tip]"); if (t){ const r = t.getBoundingClientRect(); showTip({ clientX:r.left + r.width/2, clientY:r.top }, t.dataset.tip); } });
+document.addEventListener("focusout", () => tip.hidden = true);
+addEventListener("scroll", () => tip.hidden = true, { passive:true });
+
+/* ---- Chart helpers ---- */
+const count = (list, f) => list.reduce((m, d) => m.set(f(d), (m.get(f(d)) || 0) + 1), new Map());
+function orderCats(variable, m){
+  const keys = [...m.keys()];
+  if (variable === "group") return GROUPS.filter(g => m.has(g)).concat(keys.includes(NG) ? [NG] : []);
+  return keys.sort((a,b) => (a === NG) - (b === NG) || m.get(b) - m.get(a) || a.localeCompare(b));
+}
+/* Country flags (small images from flagcdn.com; hidden if they can't load). */
+const ISO = {"Argentina":"ar","Australia":"au","Austria":"at","Belgium":"be","Brazil":"br","Canada":"ca","Chile":"cl","China":"cn","Colombia":"co","Czech Republic":"cz","Czechia":"cz",
+  "Denmark":"dk","Egypt":"eg","Finland":"fi","France":"fr","Germany":"de","Greece":"gr","Hungary":"hu","Iceland":"is","India":"in","Indonesia":"id","Ireland":"ie","Israel":"il","Italy":"it",
+  "Japan":"jp","Kenya":"ke","Mexico":"mx","Namibia":"na","Netherlands":"nl","New Zealand":"nz","Norway":"no","Panama":"pa","Peru":"pe","Poland":"pl","Portugal":"pt","Russia":"ru",
+  "Singapore":"sg","South Africa":"za","South Korea":"kr","Spain":"es","Sweden":"se","Switzerland":"ch","Taiwan":"tw","Tanzania":"tz","Turkey":"tr","United Kingdom":"gb","United States":"us"};
+const flag = name => ISO[name] ? `<img class="flag" src="https://flagcdn.com/w40/${ISO[name]}.png" alt="" width="20" height="15" loading="lazy">` : `<span class="flag noflag"></span>`;
+document.addEventListener("error", e => { if (e.target.classList && e.target.classList.contains("flag")) e.target.replaceWith(Object.assign(document.createElement("span"), { className:"flag noflag" })); }, true);
+/* Readable text on a coloured bar segment. */
+function inkOn(hex){ const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#fff"; const v = parseInt(m[1],16), r = v>>16 & 255, g = v>>8 & 255, b = v & 255;
+  const L = [r,g,b].map(c => { c /= 255; return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4); }); return (.2126*L[0] + .7152*L[1] + .0722*L[2]) > .36 ? "#17262b" : "#fff"; }
+/* Horizontal bars; optional stacking by a second variable. */
+function hbars(el, list, rowVar, colVar){
+  const rv = VARS[rowVar], rowCounts = count(list, rv.get), rowsOrd = orderCats(rowVar, rowCounts);
+  if (!list.length){ el.innerHTML = `<p class="empty">No datasets match.</p>`; return; }
+  const max = Math.max(...rowCounts.values());
+  let legend = "", colors = null, colsOrd = [];
+  if (colVar){
+    const cv = VARS[colVar], cc = count(DS, cv.get); colsOrd = orderCats(colVar, cc); colors = colorMap(colVar, colsOrd);
+    const present = new Set(list.map(cv.get));
+    legend = `<div class="legend">${colsOrd.filter(c => present.has(c)).map(c => `<span><i class="sw" style="background:${colors[c]}"></i>${esc(c)}</span>`).join("")}</div>`;
+  }
+  const single = rowVar === "group" ? null : css("--bar");
+  el.innerHTML = legend + `<div class="hbars">${rowsOrd.map(r => {
+    const inRow = list.filter(d => rv.get(d) === r), total = inRow.length;
+    let segs;
+    if (colVar){ const cv = VARS[colVar]; segs = colsOrd.map(c => { const n = inRow.filter(d => cv.get(d) === c).length; if (!n) return "";
+        return `<span class="seg" tabindex="0" style="width:${n / max * 100}%;background:${colors[c]};color:${inkOn(colors[c])}" data-tip="<b>${esc(r)}</b><br>${esc(c)}: ${plural(n,"dataset")}">${n / max >= .06 ? n : ""}</span>`; }).join(""); }
+    else segs = `<span class="seg" tabindex="0" style="width:${total / max * 100}%;background:${single || groupColor(r)}" data-tip="<b>${esc(r)}</b><br>${plural(total,"dataset")}"></span>`;
+    return `<span class="l">${rowVar === "country" ? flag(r) : ""}${esc(r)}</span><span class="t">${segs}</span><span class="v">${total}</span>`; }).join("")}</div>`;
+}
+/* Cross-tab heatmap: single-hue sequential scale, numbers always printed. */
+function heat(el, list, rowVar, colVar){
+  const rv = VARS[rowVar], rowsOrd = orderCats(rowVar, count(list, rv.get));
+  if (!list.length){ el.innerHTML = ""; return; }
+  if (!colVar){ el.innerHTML = `<table class="heat"><tr><th class="rowh">${esc(rv.label)}</th><th>Datasets</th></tr>${rowsOrd.map(r => `<tr><th class="rowh">${esc(r)}</th><td>${list.filter(d => rv.get(d) === r).length}</td></tr>`).join("")}</table>`; return; }
+  const cv = VARS[colVar], colsOrd = orderCats(colVar, count(list, cv.get));
+  const cell = (r, c) => list.filter(d => rv.get(d) === r && cv.get(d) === c).length;
+  const max = Math.max(1, ...rowsOrd.flatMap(r => colsOrd.map(c => cell(r, c))));
+  const shade = n => { if (!n) return `background:var(--track);color:var(--muted)`; const t = .18 + .82 * n / max;
+    return `background:color-mix(in oklab, var(--seq1) ${Math.round(t*100)}%, var(--seq0));color:${t > .55 ? "#fff" : "var(--fg)"}`; };
+  el.innerHTML = `<table class="heat"><tr><th class="rowh">${esc(rv.label)} \\ ${esc(cv.label)}</th>${colsOrd.map(c => `<th>${esc(c)}</th>`).join("")}<th class="tot">Total</th></tr>
+    ${rowsOrd.map(r => `<tr><th class="rowh">${esc(r)}</th>${colsOrd.map(c => { const n = cell(r,c); return `<td style="${shade(n)}" data-tip="<b>${esc(r)}</b> × ${esc(c)}<br>${plural(n,"dataset")}">${n || "·"}</td>`; }).join("")}<td class="tot">${list.filter(d => rv.get(d) === r).length}</td></tr>`).join("")}
+    <tr><th class="rowh tot">Total</th>${colsOrd.map(c => `<td class="tot">${list.filter(d => cv.get(d) === c).length}</td>`).join("")}<td class="tot">${list.length}</td></tr></table>`;
+}
+/* Measure SVG width once the element is visible. */
+const widthOf = el => Math.max(280, el.clientWidth || el.parentElement.clientWidth || 600);
+/* Cumulative step line of uploads. */
+function growth(el){
+  const dated = DS.filter(d => /^\d{4}-\d{2}-\d{2}/.test(d.uploaded)).map(d => d.uploaded.slice(0,10)).sort();
+  const undated = DS.length - dated.length;
+  $("growthCap").textContent = `Cumulative datasets by date added${undated ? ` (${plural(undated,"dataset")} without a date not shown)` : ""}.`;
+  if (dated.length < 2){ el.innerHTML = `<p class="empty">Not enough dated uploads yet.</p>`; return; }
+  const W = widthOf(el), H = 200, m = { l:34, r:14, t:12, b:26 };
+  const days = dated.map(s => new Date(s + "T00:00:00").getTime());
+  const x0 = days[0], x1 = Math.max(days[days.length-1], x0 + 864e5), yMax = dated.length;
+  const X = t => m.l + (t - x0) / (x1 - x0) * (W - m.l - m.r), Y = v => H - m.b - v / yMax * (H - m.t - m.b);
+  const pts = []; let c = 0; const byDay = count(dated, s => s);
+  [...byDay.keys()].sort().forEach(s => { const t = new Date(s + "T00:00:00").getTime(); pts.push([X(t), Y(c)]); c += byDay.get(s); pts.push([X(t), Y(c)]); });
+  const path = "M" + pts.map(p => p.map(v => v.toFixed(1)).join(",")).join("L");
+  const ticksY = [0, Math.round(yMax/2), yMax].filter((v,i,a) => a.indexOf(v) === i);
+  const fmtD = t => new Date(t).toLocaleDateString("en-GB", { day:"numeric", month:"short" });
+  const line = css("--bar");
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative datasets over time, reaching ${yMax}">
+    ${ticksY.map(v => `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--line")}" stroke-width="1"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`).join("")}
+    <text x="${m.l}" y="${H-6}">${fmtD(x0)}</text><text x="${W-m.r}" y="${H-6}" text-anchor="end">${fmtD(x1)}</text>
+    <path d="${path}L${X(x1).toFixed(1)},${Y(yMax).toFixed(1)}" fill="none" stroke="${line}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(x1)}" cy="${Y(yMax)}" r="4.5" fill="${line}" stroke="${css("--panel")}" stroke-width="2"/>
+    ${[...byDay.keys()].sort().map((s,i,arr) => { const t = new Date(s + "T00:00:00").getTime(); const cum = arr.slice(0,i+1).reduce((a,k) => a + byDay.get(k), 0);
+      return `<rect x="${X(t)-8}" y="${m.t}" width="16" height="${H-m.t-m.b}" fill="transparent" data-tip="<b>${new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</b><br>+${byDay.get(s)} added · ${cum} in total"/>`; }).join("")}
+  </svg>`;
+}
+/* Log-scale strip plot: one dot per dataset, rows = groups. */
+function strip(el, measure, groupVar){
+  const M = MEASURES[measure], gv = VARS[groupVar];
+  const pts = DS.filter(d => isFinite(M.get(d)) && M.get(d) > 0);
+  const missing = DS.length - pts.length;
+  $("dNote").textContent = missing ? `${plural(missing,"dataset")} without a value for this measure ${missing === 1 ? "is" : "are"} not shown.` : "";
+  if (!pts.length){ el.innerHTML = `<p class="empty">No datasets report this yet.</p>`; return; }
+  const cats = orderCats(groupVar, count(pts, gv.get)), colors = colorMap(groupVar, orderCats(groupVar, count(DS, gv.get)));
+  const vals = pts.map(M.get), lo = Math.floor(Math.log10(Math.min(...vals))), hi = Math.ceil(Math.log10(Math.max(...vals))) || lo + 1;
+  const W = widthOf(el), rowH = 34, m = { l:Math.min(170, 12 + Math.max(...cats.map(c => c.length)) * 6.6), r:16, t:8, b:28 }, H = m.t + m.b + cats.length * rowH;
+  const X = v => m.l + (Math.log10(v) - lo) / Math.max(1, hi - lo) * (W - m.l - m.r);
+  const ticks = []; for (let e = lo; e <= hi; e++) ticks.push(Math.pow(10, e));
+  const tl = v => v >= 1000 ? fmt(v) : v >= 1 ? String(v) : String(+v.toPrecision(1));
+  const jitter = id => { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 997; return (h / 997 - .5) * 14; };
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(M.label)} by ${esc(gv.label)}">
+    ${ticks.map(t => `<line x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${H-m.b}" stroke="${css("--line")}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${tl(t)}</text>`).join("")}
+    ${cats.map((c,i) => `<text x="${m.l-10}" y="${m.t + i*rowH + rowH/2 + 4}" text-anchor="end" style="fill:${css("--fg2")}">${esc(c)}</text>`).join("")}
+    ${pts.map(d => { const i = cats.indexOf(gv.get(d)), v = M.get(d);
+      return `<circle tabindex="0" cx="${X(v).toFixed(1)}" cy="${(m.t + i*rowH + rowH/2 + jitter(d.id)).toFixed(1)}" r="5" fill="${colors[gv.get(d)] || css("--cother")}" fill-opacity=".85" stroke="${css("--panel")}" stroke-width="2"
+        data-tip="<b>${esc(d.common || d.binomial || d.title)}</b><br>${esc(M.label.replace(/ \(.*/,""))}: ${fmt(v)} ${esc(M.unit)}<br>${esc(d.citation || d.id)}"/>`; }).join("")}
+  </svg>`;
+}
+
+/* Donut chart: part-to-whole, colours fixed per category, 2px surface gaps, legend with counts and shares. */
+function donut(el, list, variable){
+  const v = VARS[variable], m = count(list, v.get), cats = orderCats(variable, m), colors = colorMap(variable, orderCats(variable, count(DS, v.get)));
+  const total = list.length, R0 = 64, S = 2 * R0 + 8, c = S / 2;
+  if (!total){ el.innerHTML = `<p class="empty">No datasets yet.</p>`; return; }
+  let a0 = -Math.PI / 2;
+  const arc = (a, b) => { if (b - a >= 2 * Math.PI - 1e-6) return `M${c - R0},${c}a${R0},${R0} 0 1 0 ${2*R0},0a${R0},${R0} 0 1 0 ${-2*R0},0Z`;
+    const p = t => [c + R0 * Math.cos(t), c + R0 * Math.sin(t)], big = b - a > Math.PI ? 1 : 0, [x0,y0] = p(a), [x1,y1] = p(b);
+    return `M${c},${c}L${x0},${y0}A${R0},${R0} 0 ${big} 1 ${x1},${y1}Z`; };
+  const pct = n => Math.round(n / total * 100);
+  const slices = cats.map(k => { const n = m.get(k), a1 = a0 + n / total * 2 * Math.PI, d = arc(a0, a1); a0 = a1;
+    return `<path d="${d}" fill="${colors[k]}" stroke="${css("--panel")}" stroke-width="2" stroke-linejoin="round" tabindex="0" data-tip="<b>${esc(k)}</b><br>${plural(n,"dataset")} (${pct(n)}%)"/>`; }).join("");
+  el.innerHTML = `<div class="pie"><svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(v.label)}: ${cats.map(k => `${k} ${m.get(k)}`).join(", ")}">${slices}</svg>
+    <ul>${cats.map(k => `<li><i class="sw" style="background:${colors[k]}"></i><span>${esc(k)}</span><span class="v">${m.get(k)} · ${pct(m.get(k))}%</span></li>`).join("")}</ul></div>`;
+}
+
+/* ---- Overview ---- */
+function renderOverview(){
+  const species = new Set(DS.map(d => d.binomial.toLowerCase()).filter(Boolean)).size;
+  const nSum = DS.reduce((s,d) => s + (isFinite(d.n) ? d.n : 0), 0), nRep = DS.filter(d => isFinite(d.n)).length;
+  const temp = DS.filter(d => /^no$/i.test(d.permanence || "") && isFinite(d.n));
+  const minInd = DS.reduce((s,d) => s + (/^no$/i.test(d.permanence || "") ? (isFinite(d.groupSize) ? d.groupSize : 0) : (isFinite(d.n) ? d.n : 0)), 0);
+  const families = new Set(DS.map(d => (d.family || "").toLowerCase()).filter(Boolean)).size;
+  const people = new Set(DS.map(d => d.contributorId).filter(Boolean)).size;
+  const insts = new Set(DS.map(d => d.institution).filter(Boolean)).size;
+  const countries = new Set(DS.map(d => d.country).filter(Boolean)).size;
+  const groups = new Set(DS.map(d => d.group).filter(g => g !== NG)).size;
+  const tile = ([n,l,s]) => `<div class="tile"><span class="lbl">${l}</span><b>${fmt(n)}</b>${s ? `<small>${s}</small>` : ""}</div>`;
+  $("tiles").innerHTML = [[DS.length,"Datasets",`across ${groups} animal groups`],[species,"Species",`from ${plural(families,"family","families")}`],
+    [nSum,"Individual tracks","across all datasets"],
+    [minInd,"Minimum individuals","excluding inconsistent ID datasets"]].map(tile).join("");
+  $("tiles2").innerHTML = [[people,"Contributors",""],[insts,"Institutions",""],[countries,"Countries",""]].map(tile).join("");
+  donut($("ovGroup"), DS, "group");
+  donut($("ovMethod"), DS, "method");
+  donut($("ovSetting"), DS, "setting");
+  const cc = count(DS, VARS.country.get), top = orderCats("country", cc).slice(0, 10);
+  hbars($("ovCountry"), DS.filter(d => top.includes(VARS.country.get(d))), "country");
+  growth($("ovGrowth"));
+}
+
+/* ---- Explore ---- */
+function initControls(){
+  const opts = (sel, obj, extra) => { sel.innerHTML = (extra || "") + Object.entries(obj).map(([k,v]) => `<option value="${k}">${esc(v.label)}</option>`).join(""); };
+  opts($("xRow"), VARS); $("xRow").value = "method";
+  opts($("xCol"), VARS, `<option value="">Nothing</option>`); $("xCol").value = "group";
+  $("xFilter").innerHTML = `<option value="">All</option>` + GROUPS.filter(g => DS.some(d => d.group === g)).map(g => `<option>${g}</option>`).join("");
+  opts($("dMeasure"), MEASURES); $("dMeasure").value = "hz";
+  opts($("dGroup"), VARS); $("dGroup").value = "group";
+  ["tGroup","tSetting"].forEach(id => $(id).innerHTML = `<option value="">All</option>`);
+  GROUPS.filter(g => DS.some(d => d.group === g)).forEach(g => $("tGroup").add(new Option(g, g)));
+  [...new Set(DS.map(d => d.setting || NG))].sort().forEach(s => $("tSetting").add(new Option(s, s)));
+  ["xRow","xCol","xFilter"].forEach(id => $(id).onchange = renderExplore);
+  ["dMeasure","dGroup"].forEach(id => $(id).onchange = renderExplore);
+  ["tGroup","tSetting"].forEach(id => $(id).onchange = renderTable);
+  $("tSearch").oninput = renderTable;
+  $("spSearch").oninput = renderSpeciesList;
+}
+function renderExplore(){
+  const r = $("xRow").value, c = $("xCol").value && $("xCol").value !== r ? $("xCol").value : "", f = $("xFilter").value;
+  const list = DS.filter(d => !f || d.group === f);
+  hbars($("xBars"), list, r, c);
+  strip($("dPlot"), $("dMeasure").value, $("dGroup").value);
+}
+
+/* ---- Species ---- */
+let SPECIES = [], spSel = "";
+function buildSpecies(){
+  const m = new Map();
+  DS.forEach(d => { const k = d.binomial.toLowerCase(); if (!k) return; if (!m.has(k)) m.set(k, { key:k, binomial:d.binomial, common:new Set(), group:d.group, family:d.family, ds:[] });
+    const s = m.get(k); s.ds.push(d); if (d.common) s.common.add(d.common); if (!s.family && d.family) s.family = d.family; });
+  SPECIES = [...m.values()].sort((a,b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || a.binomial.localeCompare(b.binomial));
+  if (!SPECIES.find(s => s.key === spSel)) spSel = (SPECIES.slice().sort((a,b) => b.ds.length - a.ds.length)[0] || {}).key || "";
+}
+function renderSpeciesList(){
+  const q = $("spSearch").value.trim().toLowerCase();
+  const list = SPECIES.filter(s => !q || (s.binomial + " " + [...s.common].join(" ")).toLowerCase().includes(q));
+  $("spRows").innerHTML = list.length ? list.map(s => `<div class="sp" role="option" tabindex="0" aria-selected="${s.key === spSel}" data-sp="${esc(s.key)}">
+      <span class="dot" style="background:${groupColor(s.group)}"></span><span><i>${esc(s.binomial)}</i><small>${esc([...s.common][0] || "")}</small></span><span class="n">${s.ds.length}</span></div>`).join("")
+    : `<p class="empty">No species match.</p>`;
+}
+$("spRows").addEventListener("click", e => { const r = e.target.closest("[data-sp]"); if (r){ spSel = r.dataset.sp; renderSpeciesList(); renderProfile(); } });
+$("spRows").addEventListener("keydown", e => { const r = e.target.closest("[data-sp]"); if (r && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); spSel = r.dataset.sp; renderSpeciesList(); renderProfile(); $("spRows").querySelector(`[data-sp="${CSS.escape(spSel)}"]`)?.focus(); } });
+function chips(list, f){ const m = count(list, f); return `<div class="chips">${[...m].sort((a,b) => b[1]-a[1]).map(([k,n]) => `<span class="chip">${esc(k)}<b>${n}</b></span>`).join("")}</div>`; }
+function renderProfile(){
+  const s = SPECIES.find(x => x.key === spSel), el = $("spProfile");
+  if (!s){ el.innerHTML = `<p class="empty">Choose a species.</p>`; return; }
+  const ds = s.ds, nSum = ds.reduce((a,d) => a + (isFinite(d.n) ? d.n : 0), 0);
+  const hz = ds.map(d => d.hz).filter(isFinite), people = [...new Set(ds.map(d => d.contributor).filter(Boolean))];
+  const insts = [...new Set(ds.map(d => d.institution).filter(Boolean))];
+  const locs = [...new Set(ds.map(d => d.location).filter(Boolean))];
+  const hzTxt = hz.length ? (Math.min(...hz) === Math.max(...hz) ? `${fmt(hz[0])} Hz` : `${fmt(Math.min(...hz))}–${fmt(Math.max(...hz))} Hz`) : "Not given";
+  el.innerHTML = `<span class="lbl"><span class="dot" style="background:${groupColor(s.group)}"></span>${esc(s.group)}${s.family ? " · " + esc(s.family) : ""}</span>
+    <h2><i>${esc(s.binomial)}</i></h2><p class="common">${esc([...s.common].join(" / ") || "")}</p>
+    <div class="tiles" style="margin-bottom:6px">
+      <div class="tile"><span class="lbl">Datasets</span><b>${ds.length}</b></div>
+      <div class="tile"><span class="lbl">Individual tracks</span><b>${nSum ? fmt(nSum) : "–"}</b><small>${nSum ? (ds.some(d => /^no$/i.test(d.permanence || "")) ? "includes datasets without permanent IDs" : "where reported") : "not reported"}</small></div>
+      <div class="tile"><span class="lbl">Sampling</span><b style="font-size:20px;margin-top:9px">${hzTxt}</b></div>
+    </div>
+    <div class="kv">
+      <div><span class="lbl">Tracking methods</span>${chips(ds, d => d.method || NG)}</div>
+      <div><span class="lbl">Setting</span>${chips(ds, d => d.setting || NG)}</div>
+      <div><span class="lbl">Dimensions</span>${chips(ds, d => d.dims || NG)}</div>
+      <div><span class="lbl">Contributors</span><p>${people.length ? people.map(esc).join(", ") : "Not given"}</p></div>
+      <div><span class="lbl">Institutions</span><p>${insts.length ? insts.map(esc).join(", ") : "Not given"}</p></div>
+      <div><span class="lbl">Study locations</span><p>${locs.length ? locs.map(esc).join("; ") : "Lab or not given"}</p></div>
+    </div>
+    <span class="lbl">Datasets and papers</span>
+    <ul class="plist">${ds.map(d => `<li><b>${esc(d.title)}</b>${d.citation ? ` ${d.paper ? `<a href="${esc(d.paper)}" target="_blank" rel="noopener">${esc(d.citation)} ↗</a>` : esc(d.citation)}` : ""}
+      ${d.data ? ` · <a href="${esc(d.data)}" target="_blank" rel="noopener">Data ↗</a>` : ""}<br><span class="note">${esc([d.method, d.setting, isFinite(d.n) ? `n = ${d.n}` : "", isFinite(d.hz) ? `${d.hz} Hz` : ""].filter(Boolean).join(" · "))}</span></li>`).join("")}</ul>`;
+}
+
+/* ---- Data table ---- */
+const COLS = [
+  { k:"id", label:"ID", get:d => d.id },
+  { k:"species", label:"Species", get:d => d.common || d.binomial, html:d => `${esc(d.common)}${d.binomial ? `<br><i class="note">${esc(d.binomial)}</i>` : ""}` },
+  { k:"group", label:"Group", get:d => d.group, html:d => `<span class="dot" style="background:${groupColor(d.group)}"></span>${esc(d.group)}` },
+  { k:"method", label:"Method", get:d => d.method || "" },
+  { k:"setting", label:"Setting", get:d => d.setting || "" },
+  { k:"n", label:"Tracks", get:d => d.n, num:true },
+  { k:"hz", label:"Hz", get:d => d.hz, num:true },
+  { k:"dims", label:"Dims", get:d => d.dims || "" },
+  { k:"location", label:"Location", get:d => d.location },
+  { k:"contributor", label:"Contributor", get:d => d.contributor },
+  { k:"institution", label:"Institution", get:d => d.institution },
+  { k:"paper", label:"Paper", get:d => d.citation, html:d => d.paper ? `<a href="${esc(d.paper)}" target="_blank" rel="noopener">${esc(d.citation || "Paper")}</a>` : esc(d.citation) },
+  { k:"data", label:"Data", get:d => d.data ? 1 : 0, html:d => d.data ? `<a href="${esc(d.data)}" target="_blank" rel="noopener">Link</a>` : "" },
+];
+let sortKey = "species", sortDir = 1;
+function tableRows(){
+  const q = $("tSearch").value.trim().toLowerCase(), g = $("tGroup").value, s = $("tSetting").value;
+  const col = COLS.find(c => c.k === sortKey);
+  return DS.filter(d => (!g || d.group === g) && (!s || (d.setting || NG) === s) &&
+      (!q || [d.id, d.title, d.common, d.binomial, d.family, d.method, d.methodDetails, d.location, d.contributor, d.institution, d.country, d.citation, d.publication].join(" ").toLowerCase().includes(q)))
+    .sort((a,b) => { const x = col.get(a), y = col.get(b);
+      if (col.num){ const xa = isFinite(x) ? x : -Infinity, ya = isFinite(y) ? y : -Infinity; return (xa - ya) * sortDir; }
+      return String(x ?? "").localeCompare(String(y ?? "")) * sortDir; });
+}
+function renderTable(){
+  const list = tableRows();
+  $("tCount").textContent = list.length === DS.length ? `All ${plural(DS.length,"dataset")}` : `${list.length} of ${plural(DS.length,"dataset")}`;
+  $("tTable").innerHTML = `<thead><tr>${COLS.map(c => `<th scope="col" aria-sort="${c.k === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${c.k}">${c.label}</button></th>`).join("")}</tr></thead>
+    <tbody>${list.map(d => `<tr>${COLS.map(c => { const v = c.get(d); return `<td class="${c.num ? "num" : ""}">${c.html ? c.html(d) : c.num ? (isFinite(v) ? fmt(v) : "") : esc(v)}</td>`; }).join("")}</tr>`).join("")}</tbody>`;
+}
+$("tTable").addEventListener("click", e => { const b = e.target.closest("[data-sort]"); if (!b) return; const k = b.dataset.sort; if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } renderTable(); });
+$("tDownload").onclick = () => {
+  const cols = [["dataset_id",d=>d.id],["title",d=>d.title],["binomial_name",d=>d.binomial],["common_name",d=>d.common],["taxon_group",d=>d.group],["family",d=>d.family],
+    ["method",d=>d.method],["method_details",d=>d.methodDetails],["data_setting",d=>d.setting],["medium",d=>d.medium],["dimensions",d=>d.dims],["n_tracks",d=>isFinite(d.n)?d.n:""],["permanent_ids",d=>d.permanence||""],
+    ["group_size",d=>isFinite(d.groupSize)?d.groupSize:""],["sampling_frequency_hz",d=>isFinite(d.hz)?d.hz:""],["study_location",d=>d.location],["contributor",d=>d.contributor],
+    ["institution",d=>d.institution],["country",d=>d.country],["citation",d=>d.citation],["paper_doi",d=>d.paper],["data_doi",d=>d.data]];
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const csv = "﻿" + [cols.map(c => c[0]).join(","), ...tableRows().map(d => cols.map(c => q(c[1](d))).join(","))].join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = "swarmatlas_datasets.csv";
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+};
+
+/* ---- Tabs (hash routing so each tab can be linked or embedded directly) ---- */
+const TABS = ["overview","explore","species","data"];
+let current = "";
+function showTab(){
+  const t = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "overview";
+  TABS.forEach(k => $("tab-" + k).hidden = k !== t);
+  document.querySelectorAll("nav a").forEach(a => { if (a.dataset.tab === t) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  current = t; if (DS.length) renderTab(t);
+}
+function renderTab(t){ if (t === "overview") renderOverview(); if (t === "explore") renderExplore(); if (t === "species"){ renderSpeciesList(); renderProfile(); } if (t === "data") renderTable(); }
+function renderAll(){ buildSpecies(); renderTab(current || "overview"); }
+addEventListener("hashchange", showTab);
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => DS.length && renderTab(current), 150); });
+const rerender = () => DS.length && renderTab(current);
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", rerender);
+new MutationObserver(rerender).observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+showTab();
+
+/* ---- Loading ---- */
+function notice(h){ $("noticeText").innerHTML = h; $("notice").hidden = false; }
+Promise.all(Object.values(FILES).map(f => fetch(f, { cache:"no-cache" }).then(r => { if (!r.ok) throw new Error(f); return r.text(); })))
+  .then(([a,b,c]) => load(a,b,c))
+  .catch(() => { $("asof").textContent = "Data files not found"; notice("<b>Couldn't load the data files.</b> This page reads institutions.csv, contributors.csv and datasets.csv from the same folder. If you opened it from your computer, choose the three files instead."); });
+$("filePick").onchange = async e => { const fs = [...e.target.files], find = k => fs.find(f => f.name.toLowerCase().includes(k));
+  const a = find("institution"), b = find("contributor"), c = find("dataset");
+  if (!a || !b || !c){ notice("Choose all three files at once."); return; }
+  load(await a.text(), await b.text(), await c.text()); $("notice").hidden = true; };
+})();
+</script>
+
+</body>
+</html>
