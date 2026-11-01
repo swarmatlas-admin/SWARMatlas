@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SWARMatlas Data Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one-screen app for embedding. Header with view switch + counts; filter/list panel left, map right; stacks on narrow screens. */
+:root{
+  --bg:#f4f6f6; --panel:#ffffff; --fg:#17262b; --muted:#5b6b70; --line:#d9e0e1;
+  --accent:#0f6b6e; --accent-soft:#dcefee; --sea:#c9dde4; --land:#f5f4ef; --border-land:#a9b5b3;
+  --inst:#17262b; --inst-ring:#ffffff; --pending:#8a9a9e; --link:#0f6b6e; --shadow:0 2px 10px rgba(16,38,43,.14);
+  --fish:#2f7fd8; --bird:#d9822b; --mammal:#b04a5a; --insect:#5e9a2c; --invert:#8b5cd0; --other:#7d8a93;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",Arial,Helvetica,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
+  --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
+  --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
+  --fish:#5ea3f0; --bird:#f0a24e; --mammal:#e07484; --insect:#86c250; --invert:#ad86ea; --other:#9aa7af; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
+  --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
+  --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
+  --fish:#5ea3f0; --bird:#f0a24e; --mammal:#e07484; --insect:#86c250; --invert:#ad86ea; --other:#9aa7af; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--f-body);margin:0}
+*,*::before,*::after{box-sizing:border-box}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr}
+header{display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;justify-content:space-between;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.titlewrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font:600 19px/1.2 var(--f-display);letter-spacing:.01em;margin:0}
+.switch{display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:3px;background:var(--bg)}
+.switch button{all:unset;cursor:pointer;padding:5px 14px;border-radius:6px;font:600 13px var(--f-display);letter-spacing:.03em;color:var(--muted)}
+.switch button[aria-selected="true"]{background:var(--panel);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.switch button:focus-visible{outline:2px solid var(--accent)}
+.counts{display:flex;gap:16px;flex-wrap:wrap;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.counts b{color:var(--fg);font:600 17px var(--f-display);margin-right:4px}
+.main{display:grid;grid-template-columns:320px 1fr;min-height:0}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0}
+.filters{padding:14px 16px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
+.label{font:600 11px var(--f-display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.label button{all:unset;cursor:pointer;color:var(--accent);text-transform:none;letter-spacing:0;font:500 12px var(--f-body)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:3px 10px 3px 8px;font:500 12.5px var(--f-body);cursor:pointer}
+.chip[aria-pressed="false"]{color:var(--muted);opacity:.5}
+.chip .n{font:400 11px var(--f-mono);color:var(--muted)}
+.chip:focus-visible,.row:focus-visible,select:focus-visible,input:focus-visible,.pill button:focus-visible,.label button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sw{width:10px;height:10px;border-radius:50%;flex:none}
+.sw.ring{background:transparent!important;border:2.5px solid currentColor}
+select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.toggle input{accent-color:var(--accent);width:16px;height:16px}
+.pill{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--accent-soft);color:var(--fg);border-radius:6px;padding:6px 10px;font-size:13px}
+.pill button{all:unset;cursor:pointer;color:var(--accent);font-weight:600}
+.list{overflow:auto;min-height:0;flex:1}
+.listhead{position:sticky;top:0;background:var(--panel);padding:10px 16px 6px;border-bottom:1px solid var(--line);z-index:1;margin:0}
+.row{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:start;padding:9px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:var(--accent-soft)}
+.row .mk{margin-top:4px}
+.row .t{font-weight:500;line-height:1.3}
+.row .s{color:var(--muted);font-size:12.5px}
+.row .c{font:500 12px var(--f-mono);color:var(--muted);margin-top:2px}
+.empty{padding:20px 16px;color:var(--muted)}
+.legend{padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dia{width:10px;height:10px;transform:rotate(45deg);flex:none;background:var(--inst);border:1.5px solid var(--inst-ring);box-shadow:0 0 0 1px var(--inst)}
+.dia.pending{background:var(--panel);box-shadow:0 0 0 1.5px var(--pending);border-color:var(--panel)}
+.mapwrap{position:relative;min-height:0;display:grid}
+#map{min-height:0;background:var(--sea);z-index:0}
+.notice{position:absolute;inset:auto 12px 12px auto;z-index:900;max-width:340px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;box-shadow:var(--shadow);font-size:13px}
+.btn{display:inline-block;margin-top:8px;font:500 13px var(--f-body);background:var(--accent);color:var(--panel);border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+.unmapped{padding:8px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+
+/* popups */
+.pop h3{font:600 15px/1.25 var(--f-display);margin:0 0 3px}
+.pop .meta{color:var(--muted);font-size:12.5px;margin-bottom:6px}
+.pop dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0;font-size:12.5px}
+.pop dt{color:var(--muted)}
+.pop dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.pop a{color:var(--link);font-weight:500}
+.pop .desc{font-size:12.5px;margin:6px 0}
+.pop .note{font-size:12px;color:var(--muted)}
+.pop ul{list-style:none;padding:0;margin:6px 0;font-size:13px;display:grid;gap:3px}
+.pop li{display:flex;justify-content:space-between;gap:10px}
+.pop li span:last-child{font:12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.pop .actions{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.pop .actions button{all:unset;cursor:pointer;color:var(--link);font-weight:500;font-size:13px}
+.pop .multi{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+.pop .multi:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.pop .count{font:600 11px var(--f-display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.pop .scroll{max-height:320px;overflow:auto;padding-right:4px}
+
+
+/* basemap switcher + country labels */
+.basemaps button{all:unset;cursor:pointer;background:var(--panel);color:var(--muted);font:600 12px var(--f-display);letter-spacing:.03em;padding:6px 11px;box-shadow:var(--shadow)}
+.basemaps{display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:240px}
+.basemaps button:first-child{border-radius:7px 0 0 7px}
+.basemaps button:nth-child(3){border-radius:0 7px 7px 0}
+.basemaps button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.basemaps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tilenote{flex-basis:100%;margin-top:6px;max-width:220px;background:var(--panel);color:var(--fg);font-size:12px;padding:6px 9px;border-radius:6px;box-shadow:var(--shadow)}
+.ctry{background:none;border:0}
+.ctry span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px var(--f-body);letter-spacing:.04em;color:var(--muted);
+  text-shadow:0 0 2px var(--land),0 0 2px var(--land),0 0 3px var(--land)}
+.on-dark .ctry span{color:#fff;text-shadow:0 0 2px rgba(0,0,0,.9),0 0 4px rgba(0,0,0,.7)}
+
+@media (max-width:760px){
+  .main{grid-template-columns:1fr;grid-template-rows:auto auto;overflow:auto}
+  .mapwrap{order:-1;height:58vh}
+  aside{border-right:0;border-top:1px solid var(--line)}
+  .list{overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Leaflet 1.9 core (inlined) */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;font:13px/1.4 var(--f-body)}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-drag:none}
+.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;width:auto;padding:0}
+.leaflet-container.leaflet-touch-zoom{touch-action:pan-x pan-y}
+.leaflet-container.leaflet-touch-drag{touch-action:none}
+.leaflet-tile{filter:inherit;visibility:hidden}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-interactive{cursor:pointer}
+.leaflet-grab{cursor:grab}
+.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive{cursor:grabbing}
+.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-image-layer,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-image-layer.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.leaflet-bar{box-shadow:var(--shadow);border-radius:6px;overflow:hidden}
+.leaflet-bar a{display:block;width:32px;height:32px;line-height:32px;text-align:center;text-decoration:none;background:var(--panel);color:var(--fg);border-bottom:1px solid var(--line)}
+.leaflet-bar a:last-child{border-bottom:0}
+.leaflet-bar a:hover{background:var(--accent-soft)}
+.leaflet-bar a.leaflet-disabled{cursor:default;opacity:.4}
+.leaflet-control-zoom-in,.leaflet-control-zoom-out{font:600 18px var(--f-mono)}
+.leaflet-control-attribution{background:var(--panel);opacity:.85;margin:0!important;padding:0 6px;font-size:10.5px;color:var(--muted)}
+.leaflet-control-attribution a{color:var(--muted)}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:10px}
+.leaflet-popup-content{margin:14px 26px 12px 16px;line-height:1.35;min-height:1px}
+.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}
+.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;pointer-events:auto;transform:rotate(45deg)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--fg);box-shadow:var(--shadow)}
+.leaflet-container a.leaflet-popup-close-button{position:absolute;top:2px;right:2px;border:none;text-align:center;width:24px;height:24px;font:18px/24px var(--f-body);color:var(--muted);text-decoration:none;background:transparent}
+.leaflet-tooltip{position:absolute;padding:4px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:5px;white-space:nowrap;pointer-events:none;box-shadow:var(--shadow);font-size:12.5px}
+.mk-i,.mk-d{background:none;border:0}
+.mk-i i{display:block;transform:rotate(45deg);background:var(--inst);border:2px solid var(--inst-ring);box-shadow:0 0 0 1px var(--inst)}
+.mk-i.pending i{background:var(--panel);border-color:var(--panel);box-shadow:0 0 0 2px var(--pending)}
+.mk-i.hl i{background:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.mk-d b{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;border:2px solid var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.35);color:#fff;font:600 11px var(--f-mono)}
+.mk-d.lab b{background:var(--panel)!important;border:3px solid currentColor;color:var(--fg)}
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header>
+    <div class="titlewrap">
+      <h1>SWARMatlas map</h1>
+      <div class="switch" role="tablist" aria-label="Map view">
+        <button role="tab" id="tabInst" aria-selected="true">Institutions</button>
+        <button role="tab" id="tabDs" aria-selected="false">Datasets</button>
+      </div>
+    </div>
+    <div class="counts" aria-live="polite" id="counts"></div>
+  </header>
+  <div class="main">
+    <aside>
+      <!-- Institutions view controls -->
+      <div class="filters" id="fInstView">
+        <div>
+          <label class="label" for="iText">Search</label>
+          <input type="search" id="iText" placeholder="Institution, country or person">
+        </div>
+        <label class="toggle"><input type="checkbox" id="iOnly"> Only institutions with datasets in the atlas</label>
+      </div>
+      <!-- Datasets view controls -->
+      <div class="filters" id="fDsView" hidden>
+        <div class="pill" id="instPill" hidden><span id="instPillText"></span><button type="button" id="instPillClear" aria-label="Show all institutions">Clear</button></div>
+        <div>
+          <div class="label">Animal group <button type="button" data-all="group">Show all</button></div>
+          <div class="chips" id="fGroup"></div>
+        </div>
+        <div>
+          <div class="label">Setting <button type="button" data-all="setting">Show all</button></div>
+          <div class="chips" id="fSetting"></div>
+        </div>
+        <div>
+          <label class="label" for="fMethod">Tracking method</label>
+          <select id="fMethod"><option value="">All methods</option></select>
+        </div>
+        <div>
+          <label class="label" for="dText">Search</label>
+          <input type="search" id="dText" placeholder="Species, title, person or paper">
+        </div>
+      </div>
+      <div class="list"><p class="listhead label" id="listHead"></p><div id="rows"></div></div>
+      <div class="unmapped" id="unmapped" hidden></div>
+      <div class="legend" id="legend"></div>
+    </aside>
+    <div class="mapwrap">
+      <div id="map" role="region" aria-label="Map"></div>
+      <div class="notice" id="notice" hidden>
+        <div id="noticeText"></div>
+        <label class="btn" for="filePick">Choose the three CSV files</label>
+        <input type="file" id="filePick" accept=".csv,text/csv" multiple hidden>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+(function(){
+"use strict";
+/* ---- Files this page reads (save the purple web_ tabs of the spreadsheet as these) ---- */
+const FILES = { institutions:"institutions.csv", contributors:"contributors.csv", datasets:"datasets.csv" };
+const GROUPS = ["Fish","Bird","Mammal","Insect","Other invertebrate","Reptile","Amphibian","Other"];
+const GROUP_VAR = {"Fish":"--fish","Bird":"--bird","Mammal":"--mammal","Insect":"--insect","Other invertebrate":"--invert"};
+const LAB = s => /^lab/i.test(s||"");
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const s = String(v ?? "").trim(); return s === "" ? NaN : parseFloat(s.replace(",", ".")); };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const colorOf = g => css(GROUP_VAR[g] || "--other");
+const doiUrl = v => { v = String(v||"").trim(); if (!v) return ""; if (/^https?:\/\//i.test(v)) return v; if (/^10\.\d{4,}\//.test(v)) return "https://doi.org/" + v; return ""; };
+const safeUrl = u => /^https?:\/\//i.test(String(u||"").trim()) ? String(u).trim() : "";
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+/* ---- Map ---- */
+const map = L.map("map", { worldCopyJump:true, minZoom:2 }).setView([25, 10], 2);
+map.attributionControl.setPrefix(false);
+
+/* Layer stack (bottom to top): backup land → basemap tiles → borders/names → data markers.
+   Each style uses Esri's maintained basemap plus its matching borders-and-names overlay.
+   The drawn Natural Earth outline is only a backup, shown while a style's tiles haven't loaded (or can't). */
+[["land",150],["borders",250],["labels",260]].forEach(([n,z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; map.getPane(n).style.pointerEvents = "none"; });
+const ESRI = s => `https://server.arcgisonline.com/ArcGIS/rest/services/${s}/MapServer/tile/{z}/{y}/{x}`;
+const BASEMAPS = {
+  simple:   { label:"Simple",
+              base: () => ESRI(isDark() ? "Canvas/World_Dark_Gray_Base" : "Canvas/World_Light_Gray_Base"),
+              ref:  () => ESRI(isDark() ? "Canvas/World_Dark_Gray_Reference" : "Canvas/World_Light_Gray_Reference"),
+              maxNative:16, credit:"Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, GIS user community" },
+  terrain:  { label:"Terrain", base: () => ESRI("World_Terrain_Base"), ref: () => ESRI("Reference/World_Boundaries_and_Places_Alternate"),
+              maxNative:13, credit:"Tiles &copy; Esri &mdash; Source: USGS, Esri, TANA, DeLorme, NPS" },
+  satellite:{ label:"Satellite", base: () => ESRI("World_Imagery"), ref: () => ESRI("Reference/World_Boundaries_and_Places"),
+              maxNative:18, credit:"Imagery &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, GIS User Community" }
+};
+let basemap = "simple";
+try { const s = localStorage.getItem("swarmatlas-basemap"); if (BASEMAPS[s]) basemap = s; } catch(e){}
+let baseTiles = null, refTiles = null, tilesLoaded = false;
+let landLayer = null, borderLayer = null, labelLayer = null, COUNTRIES = null;
+
+/* ---- Backup outline: Natural Earth countries (via Apache ECharts' packaged copy, or world-atlas) ---- */
+function decodeRing(str, off, sc){ const o=[]; let px=off[0], py=off[1];
+  for (let i=0;i<str.length;i+=2){ let x=str.charCodeAt(i)-64, y=str.charCodeAt(i+1)-64; x=(x>>1)^(-(x&1)); y=(y>>1)^(-(y&1)); x+=px; y+=py; px=x; py=y; o.push([x/sc,y/sc]); } return o; }
+function decodeGeo(j){ if (!j.UTF8Encoding) return j; const sc=j.UTF8Scale||1024;
+  j.features.forEach(f=>{ const g=f.geometry, o=g.encodeOffsets;
+    if (g.type==="Polygon") g.coordinates=g.coordinates.map((r,i)=>decodeRing(r,o[i],sc));
+    else if (g.type==="MultiPolygon") g.coordinates=g.coordinates.map((p,i)=>p.map((r,k)=>decodeRing(r,o[i][k],sc))); }); return j; }
+function unwrapRing(r){ let off = 0, prev = null; return r.map(p => { let x = p[0] + off; if (prev !== null){ if (x - prev > 180){ off -= 360; x -= 360; } else if (x - prev < -180){ off += 360; x += 360; } } prev = x; return [x, p[1]]; }); }
+function ringArea(r){ let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); return Math.abs(a / 2); }
+function ringCentroid(r){ let x = 0, y = 0, a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++){ const f = r[j][0]*r[i][1] - r[i][0]*r[j][1]; x += (r[j][0]+r[i][0])*f; y += (r[j][1]+r[i][1])*f; a += f; }
+  return a ? [x/(3*a), y/(3*a)] : r[0]; }
+const polys = g => g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+const LABEL_FIX = { "United States":[39,-98], "Canada":[58,-100], "Russia":[62,95], "Norway":[62,9], "France":[46.6,2.4], "Chile":[-33,-71], "Indonesia":[-2,118], "Malaysia":[4,102], "Japan":[37,138], "Croatia":[45.5,16] };
+function prepareCountries(geo){
+  const feats = geo.type === "FeatureCollection" ? geo.features : [];
+  const shapes = [], labels = [];
+  feats.forEach(f => { if (!f.geometry) return;
+    const name = (f.properties && (f.properties.name || f.properties.NAME)) || "";
+    if (/antarctica/i.test(name)) return;
+    let best = null, total = 0; const parts = [];
+    polys(f.geometry).forEach(poly => { if (!poly[0] || poly[0].every(p => p[1] < -58)) return;
+      const fixed = poly.map(unwrapRing); parts.push(fixed); const a = ringArea(fixed[0]); total += a; if (!best || a > best.a) best = { a, r:fixed[0] }; });
+    if (!parts.length) return;
+    [-360, 0, 360].forEach(dx => shapes.push({ type:"Feature", properties:{ name }, geometry:{ type:"MultiPolygon", coordinates: parts.map(p => p.map(r => r.map(q => [q[0]+dx, q[1]]))) } }));
+    if (name && best){ const c = ringCentroid(best.r), fix = LABEL_FIX[name]; labels.push({ name, lat: fix ? fix[0] : c[1], lon: fix ? fix[1] : ((c[0] + 540) % 360) - 180, area: total }); }
+  });
+  return { shapes:{ type:"FeatureCollection", features:shapes }, labels };
+}
+function loadScript(src){ return new Promise((ok, bad) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = bad; document.head.appendChild(s); }); }
+function loadEcharts(src){ return new Promise((ok, bad) => { const prev = window.echarts; let geo = null;
+  window.echarts = { registerMap(n, g){ geo = g; } };
+  loadScript(src).then(() => { window.echarts = prev; geo ? ok(decodeGeo(geo)) : bad(); }, () => { window.echarts = prev; bad(); }); }); }
+async function loadTopo(){
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js");
+  const mod = await import("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json/+esm"); const t = mod.default || mod;
+  return window.topojson.feature(t, t.objects.countries);
+}
+loadEcharts("https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js")
+  .catch(() => loadEcharts("https://unpkg.com/echarts@4.9.0/map/js/world.js"))
+  .catch(() => loadTopo())
+  .then(geo => { COUNTRIES = prepareCountries(geo); buildBackup(); showBackup(!tilesLoaded); })
+  .catch(e => console.warn("No backup outline could be loaded", e));
+
+function backupStyle(){
+  if (basemap === "satellite") return { cls:"on-dark" };
+  return { cls:"" };
+}
+function buildBackup(){
+  if (!COUNTRIES) return;
+  [landLayer, borderLayer, labelLayer].forEach(l => l && map.removeLayer(l));
+  landLayer = L.geoJSON(COUNTRIES.shapes, { pane:"land", interactive:false, style:() => ({ stroke:false, fillColor: css("--land"), fillOpacity:1 }) });
+  borderLayer = L.geoJSON(COUNTRIES.shapes, { pane:"borders", interactive:false, style:() => ({ fill:false, color: css("--border-land"), weight:.8, lineJoin:"round" }) });
+  labelLayer = L.layerGroup();
+  COUNTRIES.labels.forEach(l => { l.marker = L.marker([l.lat, l.lon], { pane:"labels", interactive:false, keyboard:false,
+    icon: L.divIcon({ className:"ctry", html:`<span>${esc(l.name)}</span>`, iconSize:[0,0] }) }); });
+}
+let backupOn = false;
+function showBackup(on){
+  backupOn = on;
+  [landLayer, borderLayer, labelLayer].forEach(l => { if (!l) return; if (on && !map.hasLayer(l)) l.addTo(map); if (!on && map.hasLayer(l)) map.removeLayer(l); });
+  updateLabels();
+}
+function updateLabels(){
+  if (!COUNTRIES || !labelLayer || !backupOn) return;
+  const z = map.getZoom(), min = z <= 2 ? 900 : z === 3 ? 120 : z === 4 ? 15 : 0;
+  COUNTRIES.labels.forEach(l => { const show = l.area >= min; if (show && !labelLayer.hasLayer(l.marker)) labelLayer.addLayer(l.marker); if (!show && labelLayer.hasLayer(l.marker)) labelLayer.removeLayer(l.marker); });
+}
+map.on("zoomend", updateLabels);
+
+/* ---- Basemap switching ---- */
+const tileNote = document.createElement("div");
+function applyBasemap(){
+  const b = BASEMAPS[basemap];
+  [baseTiles, refTiles].forEach(t => { if (t){ t.off(); map.removeLayer(t); } });
+  tilesLoaded = false; tileNote.hidden = true; showBackup(true);
+  let errs = 0;
+  baseTiles = L.tileLayer(b.base(), { maxNativeZoom:b.maxNative, maxZoom:19, attribution:b.credit });
+  refTiles = L.tileLayer(b.ref(), { pane:"borders", maxNativeZoom:Math.max(b.maxNative, 16), maxZoom:19 });
+  const mine = baseTiles;   // ignore late events from a style the visitor has already switched away from
+  baseTiles.on("tileload", () => { if (mine === baseTiles && !tilesLoaded){ tilesLoaded = true; showBackup(false); } });
+  baseTiles.on("tileerror", () => { if (mine === baseTiles && !tilesLoaded && ++errs >= 4 && basemap !== "simple") tileNote.hidden = false; });
+  baseTiles.addTo(map); refTiles.addTo(map);
+  map.getPane("labels").className = "leaflet-pane leaflet-labels-pane " + backupStyle().cls;
+  document.querySelectorAll(".basemaps button").forEach(btn => btn.setAttribute("aria-pressed", btn.dataset.b === basemap));
+}
+const BaseControl = L.Control.extend({ options:{ position:"topright" }, onAdd(){
+  const box = L.DomUtil.create("div", "basemaps");
+  box.innerHTML = Object.entries(BASEMAPS).map(([k,v]) => `<button type="button" data-b="${k}" aria-pressed="${k === basemap}">${v.label}</button>`).join("");
+  L.DomEvent.disableClickPropagation(box);
+  box.querySelectorAll("button").forEach(btn => btn.onclick = () => { basemap = btn.dataset.b; try { localStorage.setItem("swarmatlas-basemap", basemap); } catch(e){} applyBasemap(); });
+  tileNote.className = "tilenote"; tileNote.hidden = true; tileNote.textContent = "This map style can't load in this preview. It will on the live site.";
+  box.appendChild(tileNote);
+  return box; } });
+map.addControl(new BaseControl());
+applyBasemap();
+const restyle = () => { buildBackup(); applyBasemap(); render(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", restyle);
+new MutationObserver(restyle).observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+const instLayer = L.layerGroup().addTo(map), dsLayer = L.layerGroup(), linkLayer = L.layerGroup();
+
+/* ---- Data ---- */
+let INST = new Map(), CON = new Map(), DS = [];
+const state = { view:"inst", iText:"", iOnly:false, group:new Set(), setting:new Set(), method:"", dText:"", inst:"" };
+
+function rows(text){ return Papa.parse(text, { header:true, skipEmptyLines:"greedy" }).data.map(r => {
+  const o = {}; for (const k in r) o[String(k).replace(/^﻿/,"").trim()] = typeof r[k] === "string" ? r[k].trim() : r[k]; return o; }); }
+
+function load(instText, conText, dsText){
+  INST = new Map(); CON = new Map(); DS = [];
+  rows(instText).forEach(r => { const lat = num(r.lat), lon = num(r.lon); if (!r.institution_id) return;
+    INST.set(r.institution_id, { id:r.institution_id, name:r.name || r.institution_id, lat, lon, country:r.country || "", website:safeUrl(r.website), people:[], ds:[] }); });
+  rows(conText).forEach(r => { if (!r.contributor_id) return;
+    const c = { id:r.contributor_id, name:r.name || "", inst:INST.get(r.institution_id) || null, website:safeUrl(r.website), source:r.source_type || "", ds:[] };
+    CON.set(c.id, c); if (c.inst) c.inst.people.push(c); });
+  rows(dsText).forEach(r => { if (!r.dataset_id) return;
+    const con = CON.get(r.contributor_id) || null, inst = INST.get(r.institution_id) || (con && con.inst) || null;
+    let lat = num(r.site_lat), lon = num(r.site_lon), atInst = false;
+    if ((isNaN(lat) || isNaN(lon)) && inst && !isNaN(inst.lat)) { lat = inst.lat; lon = inst.lon; atInst = true; }
+    const d = { id:r.dataset_id, title:r.title || r.dataset_id, con, inst, lat, lon, atInst, mapped: !isNaN(lat) && !isNaN(lon),
+      group: GROUPS.includes(r.taxon_group) ? r.taxon_group : (r.taxon_group ? "Other" : "Other"), groupRaw:r.taxon_group || "",
+      setting:r.data_setting || "Not given", method:r.method || "", methodDetails:r.method_details || "",
+      binomial:r.binomial_name || "", common:r.common_name || "", n:r.n || "", groupSize:r.group_size || "", nGroups:r.n_groups || "",
+      hz:r.sampling_frequency || "", dims:r.dimensions || "", location:r.study_location || "", precision:r.location_precision || "",
+      citation:r.citation || "", publication:r.publication || "", paper:doiUrl(r.paper_doi), data:doiUrl(r.data_doi), repo:r.data_repository || "",
+      source:r.source_type || "", desc:r.description || "", year:[r.start_year, r.end_year].filter(Boolean) };
+    DS.push(d); if (con) con.ds.push(d); if (inst) inst.ds.push(d); });
+  buildFilters(); buildInstMarkers(); render(); fitTo(state.view === "inst" ? instPoints() : dsPoints());
+}
+
+/* ---- Filters ---- */
+function chip(box, key, value, n, sw){
+  const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed","true");
+  b.innerHTML = `${sw}<span>${esc(value)}</span><span class="n">${n}</span>`; b.dataset.value = value;
+  b.onclick = () => { const s = state[key]; s.has(value) ? s.delete(value) : s.add(value); b.setAttribute("aria-pressed", s.has(value)); render(); };
+  box.appendChild(b); state[key].add(value);
+}
+function buildFilters(){
+  const count = k => DS.reduce((m,d) => m.set(d[k], (m.get(d[k])||0)+1), new Map());
+  const g = $("fGroup"), s = $("fSetting"); g.innerHTML = s.innerHTML = ""; state.group.clear(); state.setting.clear();
+  const gc = count("group"); GROUPS.filter(x => gc.has(x)).forEach(x => chip(g, "group", x, gc.get(x), `<i class="sw" style="background:${colorOf(x)}"></i>`));
+  [...count("setting")].sort((a,b) => b[1]-a[1]).forEach(([x,n]) => chip(s, "setting", x, n, `<i class="sw ${LAB(x)?"ring":""}" style="${LAB(x)?"color:var(--fg)":"background:var(--fg)"}"></i>`));
+  const sel = $("fMethod"); sel.length = 1;
+  [...new Set(DS.map(d => d.method).filter(Boolean))].sort().forEach(m => sel.add(new Option(m, m)));
+}
+document.querySelectorAll("[data-all]").forEach(b => b.onclick = () => {
+  const key = b.dataset.all, box = key === "group" ? $("fGroup") : $("fSetting");
+  box.querySelectorAll(".chip").forEach(c => { state[key].add(c.dataset.value); c.setAttribute("aria-pressed","true"); }); render(); });
+$("fMethod").onchange = e => { state.method = e.target.value; render(); };
+$("dText").oninput = e => { state.dText = e.target.value.trim().toLowerCase(); render(); };
+$("iText").oninput = e => { state.iText = e.target.value.trim().toLowerCase(); render(); };
+$("iOnly").onchange = e => { state.iOnly = e.target.checked; render(); };
+$("instPillClear").onclick = () => { state.inst = ""; render(); fitTo(dsPoints()); };
+
+const dsVisible = d => state.group.has(d.group) && state.setting.has(d.setting) && (!state.method || d.method === state.method) &&
+  (!state.inst || (d.inst && d.inst.id === state.inst)) &&
+  (!state.dText || [d.title, d.binomial, d.common, d.con?.name, d.inst?.name, d.citation, d.publication, d.location, d.method, d.methodDetails].join(" ").toLowerCase().includes(state.dText));
+const instVisible = i => !isNaN(i.lat) && (!state.iOnly || i.ds.length) &&
+  (!state.iText || [i.name, i.country, ...i.people.map(p => p.name)].join(" ").toLowerCase().includes(state.iText));
+
+/* ---- Views ---- */
+function setView(v){
+  state.view = v;
+  $("tabInst").setAttribute("aria-selected", v === "inst"); $("tabDs").setAttribute("aria-selected", v === "ds");
+  $("fInstView").hidden = v !== "inst"; $("fDsView").hidden = v !== "ds";
+  map.closePopup();
+  if (v === "inst"){ map.removeLayer(dsLayer); map.removeLayer(linkLayer); instLayer.addTo(map); }
+  else { map.removeLayer(instLayer); dsLayer.addTo(map); linkLayer.addTo(map); }
+  render(); fitTo(v === "inst" ? instPoints() : dsPoints());
+}
+$("tabInst").onclick = () => setView("inst");
+$("tabDs").onclick = () => setView("ds");
+[$("tabInst"), $("tabDs")].forEach(t => t.onkeydown = e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft"){ const o = t.id === "tabInst" ? $("tabDs") : $("tabInst"); o.focus(); o.click(); } });
+
+function showInstDatasets(id){ state.inst = id; setView("ds"); }
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-inst-ds]"); if (a) { showInstDatasets(a.dataset.instDs); return; }
+  const b = e.target.closest("[data-goto-inst]"); if (b) { const i = INST.get(b.dataset.gotoInst); if (i){ setView("inst"); map.flyTo([i.lat,i.lon], Math.max(map.getZoom(),5), {duration:.7}); map.once("moveend", () => i.marker && i.marker.openPopup()); } }
+});
+
+/* ---- Institutions ---- */
+const instIcon = (i, hl) => { const s = Math.min(22, 11 + Math.sqrt(i.ds.length) * 3);
+  return L.divIcon({ className:`mk-i${i.ds.length ? "" : " pending"}${hl ? " hl" : ""}`, html:`<i style="width:${s}px;height:${s}px;margin:${(26-s)/2}px"></i>`, iconSize:[26,26], iconAnchor:[13,13] }); };
+function instPopup(i){
+  const named = i.people.filter(p => p.name), anon = i.people.length - named.length;
+  const li = named.sort((a,b) => b.ds.length - a.ds.length || a.name.localeCompare(b.name))
+    .map(p => `<li><span>${p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.name)}</a>` : esc(p.name)}</span><span>${plural(p.ds.length,"dataset")}</span></li>`).join("");
+  const anonLi = anon ? `<li><span>${anon === 1 ? "1 further contributor" : anon + " further contributors"}</span><span>${plural(i.people.filter(p => !p.name).reduce((s,p) => s + p.ds.length, 0),"dataset")}</span></li>` : "";
+  return `<div class="pop"><h3>${esc(i.name)}</h3>
+    <div class="meta">${esc(i.country)}${i.country ? " · " : ""}${plural(i.people.length,"contributor")} · ${plural(i.ds.length,"dataset")}</div>
+    <ul>${li}${anonLi}</ul>
+    ${anon ? `<div class="note">Some contributors' names are not shown publicly.</div>` : ""}
+    <div class="actions">${i.ds.length ? `<button type="button" data-inst-ds="${esc(i.id)}">View their datasets</button>` : `<span class="note">Datasets coming soon</span>`}
+    ${i.website ? `<a href="${esc(i.website)}" target="_blank" rel="noopener">Website ↗</a>` : ""}</div></div>`;
+}
+function buildInstMarkers(){
+  instLayer.clearLayers();
+  INST.forEach(i => { if (isNaN(i.lat)) return;
+    i.marker = L.marker([i.lat, i.lon], { icon:instIcon(i), title:i.name, keyboard:true, zIndexOffset:i.ds.length * 10 })
+      .bindPopup(() => instPopup(i), { maxWidth:320 }).bindTooltip(i.name, { direction:"top", offset:[0,-12] }); });
+}
+const instPoints = () => [...INST.values()].filter(instVisible).map(i => [i.lat, i.lon]);
+
+/* ---- Datasets (grouped by shared location) ---- */
+function dsBlock(d){
+  const sp = d.common || d.binomial ? `${esc(d.common)}${d.common && d.binomial ? " · " : ""}${d.binomial ? `<i>${esc(d.binomial)}</i>` : ""}` : "Not given";
+  const who = d.con && d.con.name ? esc(d.con.name) : (d.con ? "Contributor not shown publicly" : "Not given");
+  const n = [d.n && `${d.n} individuals`, d.nGroups && `${d.nGroups} groups`, !d.n && d.groupSize && `groups of up to ${d.groupSize}`].filter(Boolean).join(", ");
+  const method = [d.method, d.methodDetails].filter(Boolean).join(" – ");
+  const where = d.atInst ? (LAB(d.setting) ? "Lab study – shown at the institution" : "Study site not given – shown at the institution") : (d.location || "") + (d.precision && d.precision !== "Exact" ? ` <span class="note">(${esc(d.precision)})</span>` : "");
+  const paper = d.paper ? `<a href="${esc(d.paper)}" target="_blank" rel="noopener">${esc(d.citation || "Associated paper")} ↗</a>` : esc(d.citation || d.publication);
+  return `<h3>${esc(d.title)}</h3>
+    <div class="meta">${d.inst ? `<button type="button" data-goto-inst="${esc(d.inst.id)}" style="all:unset;cursor:pointer;color:var(--link)">${esc(d.inst.name)}</button>` : ""}</div>
+    <dl><dt>Species</dt><dd>${sp}</dd>
+      <dt>Contributor</dt><dd>${who}</dd>
+      ${method ? `<dt>Method</dt><dd>${esc(method)}${d.dims ? ` (${esc(d.dims)})` : ""}</dd>` : ""}
+      <dt>Setting</dt><dd>${esc(d.setting)}</dd>
+      ${n ? `<dt>Sample</dt><dd>${esc(n)}</dd>` : ""}
+      ${d.hz ? `<dt>Sampling</dt><dd>${esc(d.hz)} Hz</dd>` : ""}
+      ${where ? `<dt>Location</dt><dd>${where}</dd>` : ""}
+      ${paper ? `<dt>Paper</dt><dd>${paper}</dd>` : ""}
+      ${d.data ? `<dt>Data</dt><dd><a href="${esc(d.data)}" target="_blank" rel="noopener">${esc(d.repo || "Open dataset")} ↗</a></dd>` : (d.source ? `<dt>Source</dt><dd>${esc(d.source)}</dd>` : "")}
+    </dl>${d.desc ? `<div class="desc">${esc(d.desc)}</div>` : ""}`;
+}
+function dsIcon(list){
+  const d = list[0], lab = list.every(x => LAB(x.setting)), c = colorOf(d.group), sz = list.length > 1 ? 24 : 16;
+  return L.divIcon({ className:`mk-d${lab ? " lab" : ""}`, html:`<b style="background:${c};color:${lab ? c : "#fff"}">${list.length > 1 ? list.length : ""}</b>`, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+}
+function drawDatasets(shown){
+  dsLayer.clearLayers(); linkLayer.clearLayers();
+  const groups = new Map();
+  shown.filter(d => d.mapped).forEach(d => { const k = d.lat.toFixed(4) + "," + d.lon.toFixed(4); (groups.get(k) || groups.set(k, []).get(k)).push(d); });
+  const link = css("--link");
+  groups.forEach(list => {
+    const d = list[0];
+    const m = L.marker([d.lat, d.lon], { icon:dsIcon(list), keyboard:true, title:list.length > 1 ? `${list.length} datasets` : d.title })
+      .bindPopup(() => `<div class="pop">${list.length > 1 ? `<div class="count">${list.length} datasets at this location</div><div class="scroll">${list.map(x => `<div class="multi">${dsBlock(x)}</div>`).join("")}</div>` : dsBlock(d)}</div>`, { maxWidth:330 })
+      .bindTooltip(list.length > 1 ? `${list.length} datasets` : (d.common || d.title), { direction:"top", offset:[0,-10] })
+      .addTo(dsLayer);
+    list.forEach(x => x.marker = m);
+  });
+  if (state.inst) shown.forEach(d => { if (d.mapped && d.inst && !d.atInst && !isNaN(d.inst.lat))
+    L.polyline([[d.lat,d.lon],[d.inst.lat,d.inst.lon]], { color:link, weight:1.5, opacity:.7, dashArray:"4 4", interactive:false }).addTo(linkLayer); });
+  if (state.inst){ const i = INST.get(state.inst); if (i && !isNaN(i.lat)) L.marker([i.lat,i.lon], { icon:instIcon(i, true), interactive:false }).addTo(linkLayer); }
+}
+const dsPoints = () => DS.filter(d => d.mapped && dsVisible(d)).flatMap(d => state.inst && d.inst && !isNaN(d.inst.lat) ? [[d.lat,d.lon],[d.inst.lat,d.inst.lon]] : [[d.lat,d.lon]]);
+
+/* ---- Render ---- */
+function counts(){
+  const species = new Set(DS.map(d => d.binomial.toLowerCase()).filter(Boolean)).size;
+  const people = [...CON.values()].length, insts = [...INST.values()].filter(i => !isNaN(i.lat)).length;
+  const countries = new Set([...INST.values()].map(i => i.country).filter(Boolean)).size;
+  $("counts").innerHTML = [[DS.length,"datasets"],[species,"species"],[people,"contributors"],[insts,"institutions"],[countries,"countries"]]
+    .map(([n,w]) => `<span><b>${n}</b>${w}</span>`).join("");
+}
+function render(){
+  counts();
+  const rowsBox = $("rows"); rowsBox.innerHTML = "";
+  if (state.view === "inst"){
+    const list = [...INST.values()].filter(instVisible);
+    INST.forEach(i => { if (!i.marker) return; const v = instVisible(i);
+      if (v && !instLayer.hasLayer(i.marker)) instLayer.addLayer(i.marker); if (!v && instLayer.hasLayer(i.marker)) instLayer.removeLayer(i.marker); });
+    $("listHead").textContent = `${plural(list.length, "institution")}`;
+    $("unmapped").hidden = true;
+    list.sort((a,b) => b.ds.length - a.ds.length || a.name.localeCompare(b.name)).forEach(i => {
+      const r = document.createElement("div"); r.className = "row"; r.tabIndex = 0; r.setAttribute("role","button");
+      r.innerHTML = `<i class="dia mk${i.ds.length ? "" : " pending"}"></i><div><div class="t">${esc(i.name)}</div><div class="s">${esc(i.country)}</div></div>
+        <div class="c">${i.ds.length}/${i.people.length}</div>`;
+      r.title = `${plural(i.ds.length,"dataset")}, ${plural(i.people.length,"contributor")}`;
+      const go = () => { map.flyTo([i.lat,i.lon], Math.max(map.getZoom(), 5), { duration:.7 }); map.once("moveend", () => i.marker.openPopup()); if (innerWidth <= 760) $("map").scrollIntoView({ behavior:"smooth" }); };
+      r.onclick = go; r.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); } };
+      rowsBox.appendChild(r); });
+    if (!list.length) rowsBox.innerHTML = `<div class="empty">No institutions match.</div>`;
+    $("legend").innerHTML = `<span><i class="dia"></i>Datasets in the atlas</span><span><i class="dia pending"></i>Contributor, datasets coming</span><span style="font-family:var(--f-mono)">0/0 = datasets / contributors</span>`;
+  } else {
+    const shown = DS.filter(dsVisible);
+    drawDatasets(shown);
+    const pi = state.inst && INST.get(state.inst);
+    $("instPill").hidden = !pi; if (pi) $("instPillText").textContent = `Datasets from ${pi.name}`;
+    $("listHead").textContent = shown.length === DS.length ? `All ${plural(DS.length,"dataset")}` : `${shown.length} of ${plural(DS.length,"dataset")}`;
+    const um = shown.filter(d => !d.mapped).length; $("unmapped").hidden = !um; $("unmapped").textContent = um ? `${plural(um,"dataset")} without a location ${um === 1 ? "is" : "are"} listed but not on the map.` : "";
+    shown.slice().sort((a,b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || (a.common||a.title).localeCompare(b.common||b.title)).forEach(d => {
+      const lab = LAB(d.setting), c = colorOf(d.group);
+      const r = document.createElement("div"); r.className = "row"; r.tabIndex = 0; r.setAttribute("role","button");
+      r.innerHTML = `<i class="sw mk ${lab ? "ring" : ""}" style="${lab ? `color:${c}` : `background:${c}`}"></i>
+        <div><div class="t">${esc(d.common || d.binomial || d.title)}</div><div class="s">${esc(d.citation || d.title)}${d.con && d.con.name ? " · " + esc(d.con.name) : ""}</div></div><div></div>`;
+      const go = () => { if (!d.mapped) return; map.flyTo([d.lat,d.lon], Math.max(map.getZoom(), 6), { duration:.7 }); map.once("moveend", () => d.marker && d.marker.openPopup()); if (innerWidth <= 760) $("map").scrollIntoView({ behavior:"smooth" }); };
+      r.onclick = go; r.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); } };
+      rowsBox.appendChild(r); });
+    if (!shown.length) rowsBox.innerHTML = `<div class="empty">No datasets match these filters.</div>`;
+    const present = GROUPS.filter(g => DS.some(d => d.group === g));
+    $("legend").innerHTML = present.map(g => `<span><i class="sw" style="background:${colorOf(g)}"></i>${esc(g)}</span>`).join("") +
+      `<span><i class="sw ring" style="color:var(--fg)"></i>Lab</span><span style="font-family:var(--f-mono)">2 = datasets at one place</span>`;
+  }
+}
+function fitTo(pts){ if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding:[40,40], maxZoom:6 }); }
+
+/* ---- Loading ---- */
+function notice(html){ $("noticeText").innerHTML = html; $("notice").hidden = false; }
+Promise.all(Object.values(FILES).map(f => fetch(f, { cache:"no-cache" }).then(r => { if (!r.ok) throw new Error(f); return r.text(); })))
+  .then(([a,b,c]) => load(a,b,c))
+  .catch(() => notice(`<b>Couldn't load the data files.</b><br>The map reads institutions.csv, contributors.csv and datasets.csv from the same folder. If you opened this file from your computer, choose the three files instead.`));
+$("filePick").onchange = async e => {
+  const fs = [...e.target.files], find = k => fs.find(f => f.name.toLowerCase().includes(k));
+  const a = find("institution"), b = find("contributor"), c = find("dataset");
+  if (!a || !b || !c){ notice("Choose all three files at once (their names must contain <b>institution</b>, <b>contributor</b> and <b>dataset</b>)."); return; }
+  load(await a.text(), await b.text(), await c.text()); $("notice").hidden = true; };
+})();
+</script>
+
+</body>
+</html>

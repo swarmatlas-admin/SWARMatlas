@@ -1,0 +1,56 @@
+contributor_id,name,institution_id,website,source_type,n_datasets
+C-001,,INST-001,,Both,1
+C-002,,INST-002,,Direct contact,0
+C-003,,INST-001,,Direct contact,0
+C-004,,INST-003,,Direct contact,0
+C-005,,INST-004,,Direct contact,0
+C-006,,INST-005,,Direct contact,0
+C-007,,INST-006,,Direct contact,0
+C-008,,INST-007,,Direct contact,0
+C-009,,INST-008,,Direct contact,0
+C-010,,INST-009,,Direct contact,0
+C-011,,INST-010,,Direct contact,0
+C-012,,INST-011,,Direct contact,0
+C-013,,INST-001,,Direct contact,0
+C-014,,INST-012,,Direct contact,0
+C-015,,INST-001,,Direct contact,0
+C-016,,INST-013,,Direct contact,0
+C-017,,INST-014,,Direct contact,0
+C-018,,INST-015,,Direct contact,0
+C-019,,INST-016,,Direct contact,0
+C-020,,INST-017,,Direct contact,0
+C-021,,INST-018,,Direct contact,0
+C-022,,INST-019,,Direct contact,0
+C-023,,INST-020,,Direct contact,0
+C-024,,INST-002,,Direct contact,0
+C-025,,INST-021,,Direct contact,0
+C-026,,INST-017,,Direct contact,0
+C-027,,INST-022,,Direct contact,0
+C-028,,INST-023,,Direct contact,0
+C-029,,INST-024,,Direct contact,0
+C-030,,INST-009,,Direct contact,0
+C-031,,INST-025,,Direct contact,0
+C-032,,INST-005,,Direct contact,0
+C-033,,INST-001,,Direct contact,0
+C-034,,INST-026,,Direct contact,0
+C-035,,INST-027,,Direct contact,1
+C-036,,INST-029,,Direct contact,1
+C-037,,INST-028,,Direct contact,0
+C-038,Margaret Crofoot,INST-001,,Open access,1
+C-039,Hannah Williams,INST-001,,Open access,1
+C-040,Carlos D. Santos,INST-030,,Open access,2
+C-041,Mark Moritz,INST-031,,Open access,3
+C-042,Andrew Berdahl,INST-032,,Open access,1
+C-043,Bernhard Voelkl,INST-009,,Open access,1
+C-044,Hangjian Ling,INST-033,,Open access,1
+C-045,Dennis J. Evangelista,INST-034,,Open access,1
+C-046,Bertrand Collignon,INST-035,,Open access,2
+C-047,Makoto Yomosa,,,Open access,1
+C-048,D. W. E. Sankey,INST-017,,Open access,1
+C-049,Anna Gagliardo,INST-036,,Open access,1
+C-050,Vaios Papaspyros,INST-037,,Open access,1
+C-051,Seungwoong Ha,INST-038,,Open access,1
+C-052,Vivek Jadhav,,,Open access,1
+C-053,Andreu Puy,INST-039,,Open access,1
+C-054,Ingo Schiffner,INST-040,,Open access,2
+C-055,Andrea Kölzsch,INST-001,,Open access,1

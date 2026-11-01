@@ -1,0 +1,41 @@
+institution_id,name,lat,lon,country,website
+INST-001,Max Planck Institute of Animal Behavior,47.6894,9.1867,Germany,https://www.ab.mpg.de
+INST-002,ESPCI Paris – PSL (PMMH lab),48.8413,2.3477,France,https://www.espci.psl.eu
+INST-003,Macquarie University,-33.7738,151.1126,Australia,https://www.mq.edu.au
+INST-004,GEOMAR Helmholtz Centre for Ocean Research Kiel,54.3289,10.1495,Germany,https://www.geomar.de
+INST-005,University of Bristol,51.4585,-2.603,United Kingdom,https://www.bristol.ac.uk
+INST-006,Australian National University,-35.2777,149.1185,Australia,https://www.anu.edu.au
+INST-007,CY Cergy Paris Université,49.0349,2.07,France,https://www.cyu.fr
+INST-008,Champalimaud Foundation,38.6928,-9.2226,Portugal,https://www.fchampalimaud.org
+INST-009,University of Oxford,51.7588,-1.2547,United Kingdom,https://www.ox.ac.uk
+INST-010,"Université Toulouse III – Paul Sabatier (CRCA, CNRS)",43.5615,1.4688,France,https://www.univ-tlse3.fr
+INST-011,"Central Saint Martins, University of the Arts London",51.5353,-0.1253,United Kingdom,https://www.arts.ac.uk/colleges/central-saint-martins
+INST-012,"DTU Aqua, Technical University of Denmark",56.16,9.545,Denmark,https://www.aqua.dtu.dk
+INST-013,University of Cambridge,52.2027,0.1217,United Kingdom,https://www.cam.ac.uk
+INST-014,Centre for Advanced Studies of Blanes (CEAB-CSIC),41.6852,2.8033,Spain,https://www.ceab.csic.es
+INST-015,University of Cape Town,-33.9578,18.4612,South Africa,https://www.uct.ac.za
+INST-016,Rice University,29.7174,-95.4018,United States,https://www.rice.edu
+INST-017,Swansea University,51.6096,-3.9809,United Kingdom,https://www.swansea.ac.uk
+INST-018,Eötvös Loránd University (ELTE),47.474,19.0623,Hungary,https://www.elte.hu
+INST-019,Swedish University of Agricultural Sciences (SLU),63.8188,20.3062,Sweden,https://www.slu.se
+INST-020,Max Planck Institute for Human Development,52.4697,13.2857,Germany,https://www.mpib-berlin.mpg.de
+INST-021,Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),52.4482,13.6491,Germany,https://www.igb-berlin.de
+INST-022,INRAE (Aix-en-Provence),43.5267,5.4778,France,https://www.inrae.fr
+INST-023,University of Glasgow,55.8721,-4.2882,United Kingdom,https://www.gla.ac.uk
+INST-024,New Jersey Institute of Technology,40.7423,-74.1793,United States,https://www.njit.edu
+INST-025,Indian Institute of Science,13.0219,77.5671,India,https://iisc.ac.in
+INST-026,"BITS Pilani, Hyderabad Campus",17.5449,78.5718,India,https://www.bits-pilani.ac.in/hyderabad/
+INST-027,University of St Andrews,56.3398,-2.7967,United Kingdom,https://www.st-andrews.ac.uk
+INST-028,University of Helsinki,60.1699,24.9497,Finland,https://www.helsinki.fi
+INST-029,Bangor University,53.229,-4.129,United Kingdom,https://www.bangor.ac.uk
+INST-030,Federal University of Pará,-1.474,-48.456,Brazil,https://portal.ufpa.br
+INST-031,Ohio State University,40.0067,-83.0305,United States,https://www.osu.edu
+INST-032,University of Washington,47.6553,-122.3035,United States,https://www.washington.edu
+INST-033,Stanford University,37.4275,-122.1697,United States,https://www.stanford.edu
+INST-034,University of North Carolina at Chapel Hill,35.9049,-79.0469,United States,https://www.unc.edu
+INST-035,Université Paris Cité (formerly Université Paris Diderot),48.8296,2.381,France,https://u-paris.fr
+INST-036,University of Pisa,43.7167,10.3966,Italy,https://www.unipi.it
+INST-037,EPFL (École Polytechnique Fédérale de Lausanne),46.5191,6.5668,Switzerland,https://www.epfl.ch
+INST-038,KAIST,36.3721,127.3604,South Korea,https://www.kaist.ac.kr
+INST-039,Universitat Politècnica de Catalunya,41.389,2.113,Spain,https://www.upc.edu
+INST-040,Goethe University Frankfurt,50.1278,8.6672,Germany,https://www.uni-frankfurt.de
