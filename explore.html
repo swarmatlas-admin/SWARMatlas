@@ -3,12 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+================================================================================
+  SWARMatlas DATA EXPLORER  (explore.html)  -  READ ME FIRST
+================================================================================
+  WHAT THIS FILE IS
+  One self-contained web page with four tabs: Overview, Explore, Species, Data.
+  It has three parts, in this order:
+    1. STYLE section             how things LOOK (colours, fonts, sizes, layout)
+    2. HTML                      what is ON the page (header, tabs, empty boxes
+                                 that the charts get drawn into)
+    3. SCRIPT section            what things DO (load data, draw charts, tables)
+
+  WHERE THE DATA COMES FROM
+  The same three CSV files as the map, in the same GitHub folder:
+    institutions.csv   contributors.csv   datasets.csv
+  Update the CSVs and both the map and this page update. No code changes needed.
+
+  OUTSIDE SERVICES IT USES (all free)
+    - PapaParse (cdnjs.cloudflare.com)   reads the CSV files
+    - flagcdn.com                        the small country flags
+    - Google Fonts                       the IBM Plex typefaces
+  All charts are drawn by this page itself (no charting library), so they
+  match the site's colours and work in dark mode.
+
+  THE TABS AND WHERE EACH LIVES IN THE SCRIPT
+    Overview  -> function renderOverview   (tiles, pie charts, growth, countries)
+    Explore   -> function renderExplore    (bar comparisons, distributions)
+    Species   -> function renderSpeciesList / renderProfile
+    Data      -> function renderTable      (+ the "Download these rows" button)
+  Each tab can be opened directly by adding #overview, #explore, #species or
+  #data to the end of the web address (handy for separate Google Sites pages).
+
+  HOW TO MAKE COMMON CHANGES  (search this file for the words in CAPITALS)
+    - Change a colour ................. the --names in ":root" (CSS). Change it in
+                                        ALL THREE colour blocks (light + two dark).
+    - Animal-group colours ............ --c1 (Fish) --c2 (Bird) --c3 (Mammal)
+                                        --c4 (Insect) --c5 --c6 --c7 (others)
+    - Wording on tiles ................ function renderOverview (the tile lists)
+    - Chart titles and captions ....... the HTML section, inside each <section>
+    - Add a choice to "Count by" ...... const VARS (one line per choice)
+    - Add a "Distributions" measure ... const MEASURES
+    - Add/remove a Data-table column .. const COLS
+    - Add a country flag .............. const ISO (country name -> 2-letter code)
+
+  HOW TO TEST A CHANGE SAFELY
+  Edit a copy, upload it to GitHub, and check the live page. If something breaks,
+  GitHub's History (clock icon on the file) lets you restore the previous version.
+================================================================================
+-->
 <title>SWARMatlas Data Explorer</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
 /* Layout: tabbed dashboard for embedding. Header with tab bar; each tab is a single scrolling column of cards (summary first, detail below). */
+/* ----------------------------------------------------------------------------
+   COLOURS AND FONTS ("design tokens")
+   Every colour is defined once here as a --name and used elsewhere as var(--name).
+   This block is the LIGHT theme; the two blocks after it hold the DARK values for
+   the same names. Change a colour in all three blocks.
+     --bg / --panel ...... page background / white cards
+     --fg / --fg2 / --muted  main / secondary / grey text
+     --line / --track .... dividers / empty bar backgrounds
+     --accent / --link ... teal for active tabs, buttons and links
+     --bar ............... single-colour bars (e.g. tracking method, countries)
+     --c1 ... --c7 ....... the category colours, ALWAYS in this order, so a given
+                           category keeps its colour across every chart. These were
+                           checked to stay distinguishable for colour-blind readers.
+     --cother ............ grey for "Other" and "Not given"
+     --seq0 / --seq1 ..... light-to-dark scale (kept for any future heat-style chart)
+   ---------------------------------------------------------------------------- */
 :root{
   --bg:#f4f6f6; --panel:#ffffff; --fg:#17262b; --fg2:#3d4f54; --muted:#5b6b70; --line:#d9e0e1; --track:#eef2f2;
   --accent:#0f6b6e; --accent-soft:#dcefee; --link:#0f6b6e; --shadow:0 1px 3px rgba(16,38,43,.08);
@@ -29,6 +94,14 @@
   --seq0:#1a2a33; --seq1:#3987e5; --bar:#3987e5;
   --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --cother:#6d7c80; color-scheme:dark}
 
+/* ----------------------------------------------------------------------------
+   PAGE LAYOUT
+   header ... stays stuck to the top while scrolling; holds the title and tab bar
+   main ..... the content column (max 1180px wide, centred)
+   .card .... a white box holding one chart
+   .tiles ... the headline-number boxes (.t4 = row of 4, .t3 = row of 3)
+   .g2/.g3 .. grids of cards, 2 or 3 across, dropping to 1 across on phones
+   ---------------------------------------------------------------------------- */
 *,*::before,*::after{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body);margin:0}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
@@ -66,6 +139,8 @@ section[hidden]{display:none}
 .tile b{display:block;font:600 30px/1.1 var(--f-display);font-variant-numeric:tabular-nums;margin-top:4px}
 .tile small{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px}
 
+/* Bar charts are built from ordinary boxes (not images): a label, a track with
+   coloured segments inside, and the total. .seg is one coloured segment. */
 /* horizontal bars */
 .hbars{display:grid;grid-template-columns:minmax(90px,max-content) 1fr auto;gap:6px 10px;align-items:center}
 .hbars .l{font-size:13px;color:var(--fg2);overflow-wrap:anywhere;display:flex;align-items:center;gap:8px}
@@ -87,14 +162,9 @@ select:focus-visible,input:focus-visible,button:focus-visible,.sp:focus-visible,
 .btn{font:600 13px var(--f-body);background:var(--accent);color:var(--panel);border:0;border-radius:6px;padding:8px 14px;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
 
-/* heatmap + data table */
+/* data table */
 .scrollx{overflow-x:auto;max-width:100%}
 table{border-collapse:collapse;font-size:13px;width:100%}
-.heat th,.heat td{padding:6px 8px;text-align:center;border:2px solid var(--panel)}
-.heat th{font-weight:500;color:var(--fg2);font-size:12px;vertical-align:bottom}
-.heat th.rowh{text-align:left;white-space:nowrap}
-.heat td{font:500 12.5px var(--f-mono);font-variant-numeric:tabular-nums;min-width:44px;border-radius:4px}
-.heat td.tot,.heat th.tot{color:var(--muted);background:transparent}
 .data th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);padding:0;white-space:nowrap}
 .data th button{all:unset;cursor:pointer;display:block;padding:8px 10px}
 .data th button::after{content:"";margin-left:4px}
@@ -107,6 +177,8 @@ table{border-collapse:collapse;font-size:13px;width:100%}
 a{color:var(--link)}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
 
+/* Species tab: list on the left (.splist / .sp), profile on the right (.profile).
+   On narrow screens (under 800px) they stack. .tip is the hover tooltip box. */
 /* species */
 .splayout{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
 .splist{max-height:72vh;overflow:auto;padding:0}
@@ -140,6 +212,15 @@ svg text{fill:var(--muted);font:11px var(--f-body)}
 <body>
 
 
+<!-- ============================================================================
+     HTML: WHAT IS ON THE PAGE
+     The header holds the title, the "26 datasets..." line (#asof, filled in by
+     the script) and the tab links. Each tab is a <section> below; only one is
+     shown at a time. The empty <div id="..."> boxes are where the script draws
+     each chart - e.g. <div id="ovGroup"> becomes the animal-group pie chart.
+     To change a chart's title or caption, edit the <h2> and <p class="cap"> above
+     its box.
+     ============================================================================ -->
 <header>
   <div class="hrow">
     <div><h1>SWARMatlas data explorer</h1><div class="sub" id="asof">Loading the catalogue…</div></div>
@@ -227,13 +308,31 @@ svg text{fill:var(--muted);font:11px var(--f-body)}
 </main>
 <div class="tip" id="tip" hidden></div>
 
+<!-- PapaParse reads the CSV files. The version number is fixed on purpose. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 (function(){
 "use strict";
+/* ============================================================================
+   THE SCRIPT - what happens when the page opens:
+     1. Download the three CSVs                         ("Loading", at the end)
+     2. Join them into one list of datasets (DS)        (function load)
+     3. Fill in the dropdown menus                      (function initControls)
+     4. Draw whichever tab is open                      (function renderTab)
+   Switching tab or changing a dropdown simply redraws that tab.
+
+   FILES   the CSV names it reads
+   GROUPS  the animal groups, in the fixed order used for colours and legends
+   NG      the label used for blank values ("Not given")
+   ============================================================================ */
 const FILES = { institutions:"institutions.csv", contributors:"contributors.csv", datasets:"datasets.csv" };
 const GROUPS = ["Fish","Bird","Mammal","Insect","Other invertebrate","Reptile","Amphibian","Other"];
 const NG = "Not given";
+/* Small helper tools:
+     $(id)   get an element by id        esc(t)  make text safe for the page
+     num(v)  CSV value -> number         css(n)  read a colour, e.g. css("--c1")
+     fmt(n)  1234 -> "1,234"             plural  "1 dataset" / "3 datasets"
+     doiUrl  "10.1234/abc" -> https://doi.org/10.1234/abc */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const s = String(v ?? "").trim(); return s === "" ? NaN : parseFloat(s.replace(",", ".")); };
@@ -250,6 +349,18 @@ function colorMap(variable, cats){
   const m = {}; let k = 0; cats.forEach(c => { m[c] = (c === NG || c === "Other" || k >= 7) ? css("--cother") : css(SLOTS[k++]); }); return m;
 }
 
+/* ============================================================================
+   DATA SET-UP
+   DS holds every dataset after loading, each as a tidy record (see load below).
+
+   VARS = THE CHOICES IN THE "COUNT BY" / "SPLIT BY" MENUS (Explore tab) and the
+   categories used by the pie charts. Each line is:
+       key:{ label:"What the menu shows", get:d => d.whichField || NG }
+   To add one, copy a line and point it at another field from load().
+
+   MEASURES = THE CHOICES IN THE "DISTRIBUTIONS" CHART. Each has a label, the
+   field to read, and the unit shown in the hover box.
+   ============================================================================ */
 /* ---- Data ---- */
 let DS = [];
 const VARS = {
@@ -273,6 +384,12 @@ const MEASURES = {
 };
 
 function rows(t){ return Papa.parse(t, { header:true, skipEmptyLines:"greedy" }).data.map(r => { const o = {}; for (const k in r) o[String(k).replace(/^﻿/,"").trim()] = typeof r[k] === "string" ? r[k].trim() : r[k]; return o; }); }
+/* load() runs once the CSVs arrive. It joins each dataset to its contributor and
+   institution and builds a tidy record with short names used everywhere else
+   (d.group, d.method, d.n, d.hz, d.permanence, d.citation, ...).
+   The r.something names on the right must match the CSV column headers exactly;
+   if you rename a column in the spreadsheet, rename it here too.
+   Contributors whose names aren't public show as "Not shown publicly". */
 function load(instT, conT, dsT){
   const inst = new Map(rows(instT).filter(r => r.institution_id).map(r => [r.institution_id, r]));
   const con = new Map(rows(conT).filter(r => r.contributor_id).map(r => [r.contributor_id, r]));
@@ -295,6 +412,12 @@ function load(instT, conT, dsT){
   initControls(); renderAll();
 }
 
+/* ============================================================================
+   HOVER BOXES
+   Any element with a data-tip="..." attribute shows that text in a small box when
+   hovered (or focused with the keyboard). The charts set data-tip on each bar,
+   slice and dot, so this one piece of code handles every tooltip on the page.
+   ============================================================================ */
 /* ---- Tooltip (shared) ---- */
 const tip = $("tip");
 function showTip(e, html){ tip.innerHTML = html; tip.hidden = false; moveTip(e); }
@@ -307,6 +430,14 @@ document.addEventListener("focusin", e => { const t = e.target.closest("[data-ti
 document.addEventListener("focusout", () => tip.hidden = true);
 addEventListener("scroll", () => tip.hidden = true, { passive:true });
 
+/* ============================================================================
+   CHART BUILDING BLOCKS
+   count(list, f)   tallies how many datasets fall in each category
+   orderCats        puts categories in display order: animal groups in their fixed
+                    order, everything else biggest first, with "Not given" last
+   colorMap         gives each category its colour. Colour follows the category,
+                    not its position, so filtering never repaints the bars.
+   ============================================================================ */
 /* ---- Chart helpers ---- */
 const count = (list, f) => list.reduce((m, d) => m.set(f(d), (m.get(f(d)) || 0) + 1), new Map());
 function orderCats(variable, m){
@@ -314,6 +445,9 @@ function orderCats(variable, m){
   if (variable === "group") return GROUPS.filter(g => m.has(g)).concat(keys.includes(NG) ? [NG] : []);
   return keys.sort((a,b) => (a === NG) - (b === NG) || m.get(b) - m.get(a) || a.localeCompare(b));
 }
+/* ISO = COUNTRY NAME -> TWO-LETTER CODE for the flags. The name must match the
+   "country" column of institutions.csv exactly. If a new country shows no flag,
+   add it here (codes: en.wikipedia.org/wiki/ISO_3166-1_alpha-2). */
 /* Country flags (small images from flagcdn.com; hidden if they can't load). */
 const ISO = {"Argentina":"ar","Australia":"au","Austria":"at","Belgium":"be","Brazil":"br","Canada":"ca","Chile":"cl","China":"cn","Colombia":"co","Czech Republic":"cz","Czechia":"cz",
   "Denmark":"dk","Egypt":"eg","Finland":"fi","France":"fr","Germany":"de","Greece":"gr","Hungary":"hu","Iceland":"is","India":"in","Indonesia":"id","Ireland":"ie","Israel":"il","Italy":"it",
@@ -324,6 +458,10 @@ document.addEventListener("error", e => { if (e.target.classList && e.target.cla
 /* Readable text on a coloured bar segment. */
 function inkOn(hex){ const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#fff"; const v = parseInt(m[1],16), r = v>>16 & 255, g = v>>8 & 255, b = v & 255;
   const L = [r,g,b].map(c => { c /= 255; return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4); }); return (.2126*L[0] + .7152*L[1] + .0722*L[2]) > .36 ? "#17262b" : "#fff"; }
+/* hbars(box, datasets, rowVar, colVar) draws a bar chart into box: one bar per
+   category of rowVar. If colVar is given, each bar is split into coloured
+   segments (e.g. tracking method split by animal group), with the count printed
+   inside segments wide enough to hold it. */
 /* Horizontal bars; optional stacking by a second variable. */
 function hbars(el, list, rowVar, colVar){
   const rv = VARS[rowVar], rowCounts = count(list, rv.get), rowsOrd = orderCats(rowVar, rowCounts);
@@ -344,20 +482,8 @@ function hbars(el, list, rowVar, colVar){
     else segs = `<span class="seg" tabindex="0" style="width:${total / max * 100}%;background:${single || groupColor(r)}" data-tip="<b>${esc(r)}</b><br>${plural(total,"dataset")}"></span>`;
     return `<span class="l">${rowVar === "country" ? flag(r) : ""}${esc(r)}</span><span class="t">${segs}</span><span class="v">${total}</span>`; }).join("")}</div>`;
 }
-/* Cross-tab heatmap: single-hue sequential scale, numbers always printed. */
-function heat(el, list, rowVar, colVar){
-  const rv = VARS[rowVar], rowsOrd = orderCats(rowVar, count(list, rv.get));
-  if (!list.length){ el.innerHTML = ""; return; }
-  if (!colVar){ el.innerHTML = `<table class="heat"><tr><th class="rowh">${esc(rv.label)}</th><th>Datasets</th></tr>${rowsOrd.map(r => `<tr><th class="rowh">${esc(r)}</th><td>${list.filter(d => rv.get(d) === r).length}</td></tr>`).join("")}</table>`; return; }
-  const cv = VARS[colVar], colsOrd = orderCats(colVar, count(list, cv.get));
-  const cell = (r, c) => list.filter(d => rv.get(d) === r && cv.get(d) === c).length;
-  const max = Math.max(1, ...rowsOrd.flatMap(r => colsOrd.map(c => cell(r, c))));
-  const shade = n => { if (!n) return `background:var(--track);color:var(--muted)`; const t = .18 + .82 * n / max;
-    return `background:color-mix(in oklab, var(--seq1) ${Math.round(t*100)}%, var(--seq0));color:${t > .55 ? "#fff" : "var(--fg)"}`; };
-  el.innerHTML = `<table class="heat"><tr><th class="rowh">${esc(rv.label)} \\ ${esc(cv.label)}</th>${colsOrd.map(c => `<th>${esc(c)}</th>`).join("")}<th class="tot">Total</th></tr>
-    ${rowsOrd.map(r => `<tr><th class="rowh">${esc(r)}</th>${colsOrd.map(c => { const n = cell(r,c); return `<td style="${shade(n)}" data-tip="<b>${esc(r)}</b> × ${esc(c)}<br>${plural(n,"dataset")}">${n || "·"}</td>`; }).join("")}<td class="tot">${list.filter(d => rv.get(d) === r).length}</td></tr>`).join("")}
-    <tr><th class="rowh tot">Total</th>${colsOrd.map(c => `<td class="tot">${list.filter(d => cv.get(d) === c).length}</td>`).join("")}<td class="tot">${list.length}</td></tr></table>`;
-}
+/* The growth line and the distributions chart are drawn as SVG (vector graphics)
+   sized to the width of their card, and redrawn if the window is resized. */
 /* Measure SVG width once the element is visible. */
 const widthOf = el => Math.max(280, el.clientWidth || el.parentElement.clientWidth || 600);
 /* Cumulative step line of uploads. */
@@ -385,6 +511,10 @@ function growth(el){
       return `<rect x="${X(t)-8}" y="${m.t}" width="16" height="${H-m.t-m.b}" fill="transparent" data-tip="<b>${new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</b><br>+${byDay.get(s)} added · ${cum} in total"/>`; }).join("")}
   </svg>`;
 }
+/* strip() = the DISTRIBUTIONS chart. One dot per dataset, one row per category.
+   The axis is logarithmic (1, 10, 100...) because values like sampling frequency
+   span from fractions of a Hz to 50+ Hz. Dots are nudged up/down slightly
+   ("jitter") so ones with the same value don't hide each other. */
 /* Log-scale strip plot: one dot per dataset, rows = groups. */
 function strip(el, measure, groupVar){
   const M = MEASURES[measure], gv = VARS[groupVar];
@@ -408,6 +538,9 @@ function strip(el, measure, groupVar){
   </svg>`;
 }
 
+/* donut() draws the PIE CHARTS on the Overview tab (named "donut" from an earlier
+   version that had a hole in the middle). Slices are in a fixed category order
+   with a thin gap between them; the list beside it gives counts and percentages. */
 /* Donut chart: part-to-whole, colours fixed per category, 2px surface gaps, legend with counts and shares. */
 function donut(el, list, variable){
   const v = VARS[variable], m = count(list, v.get), cats = orderCats(variable, m), colors = colorMap(variable, orderCats(variable, count(DS, v.get)));
@@ -424,6 +557,16 @@ function donut(el, list, variable){
     <ul>${cats.map(k => `<li><i class="sw" style="background:${colors[k]}"></i><span>${esc(k)}</span><span class="v">${m.get(k)} · ${pct(m.get(k))}%</span></li>`).join("")}</ul></div>`;
 }
 
+/* ============================================================================
+   OVERVIEW TAB
+   The headline tiles are built from two lists inside renderOverview:
+       [number, "LABEL", "grey caption"]
+   Edit the label or caption text there. An empty caption ("") hides the grey line.
+     Individual tracks    = total of the "n" column
+     Minimum individuals  = the same, but leaving out datasets whose permanence is
+                            "No" (for those, a known group_size is used instead)
+   Then it draws the three pie charts, the growth line and the country bars.
+   ============================================================================ */
 /* ---- Overview ---- */
 function renderOverview(){
   const species = new Set(DS.map(d => d.binomial.toLowerCase()).filter(Boolean)).size;
@@ -448,6 +591,12 @@ function renderOverview(){
   growth($("ovGrowth"));
 }
 
+/* ============================================================================
+   EXPLORE TAB
+   initControls fills every dropdown on the page (Explore and Data tabs) and
+   connects them so changing one redraws the chart. renderExplore draws the
+   comparison bars and the distributions chart from the current menu choices.
+   ============================================================================ */
 /* ---- Explore ---- */
 function initControls(){
   const opts = (sel, obj, extra) => { sel.innerHTML = (extra || "") + Object.entries(obj).map(([k,v]) => `<option value="${k}">${esc(v.label)}</option>`).join(""); };
@@ -472,6 +621,13 @@ function renderExplore(){
   strip($("dPlot"), $("dMeasure").value, $("dGroup").value);
 }
 
+/* ============================================================================
+   SPECIES TAB
+   buildSpecies groups datasets by binomial_name (so spelling must be consistent
+   in the spreadsheet: "Columba livia" and "Columba Livia" would be one species,
+   but "Columba livea" would become a second one). The species with the most
+   datasets is shown first. renderProfile builds the right-hand summary.
+   ============================================================================ */
 /* ---- Species ---- */
 let SPECIES = [], spSel = "";
 function buildSpecies(){
@@ -519,6 +675,15 @@ function renderProfile(){
       ${d.data ? ` · <a href="${esc(d.data)}" target="_blank" rel="noopener">Data ↗</a>` : ""}<br><span class="note">${esc([d.method, d.setting, isFinite(d.n) ? `n = ${d.n}` : "", isFinite(d.hz) ? `${d.hz} Hz` : ""].filter(Boolean).join(" · "))}</span></li>`).join("")}</ul>`;
 }
 
+/* ============================================================================
+   DATA TAB
+   COLS = THE TABLE COLUMNS, left to right. Each has a key, the header label, the
+   value used for sorting (get), and optionally how to display it (html). Remove a
+   line to drop a column; copy one to add a column.
+   tableRows applies the search box and filters, then sorts.
+   The download button builds a CSV of the rows currently shown; its column list
+   is inside the tDownload function. (Downloads only work on the live site.)
+   ============================================================================ */
 /* ---- Data table ---- */
 const COLS = [
   { k:"id", label:"ID", get:d => d.id },
@@ -563,6 +728,12 @@ $("tDownload").onclick = () => {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 };
 
+/* ============================================================================
+   TABS
+   The tab shown depends on the end of the web address (#overview, #explore...).
+   Clicking a tab changes the address, which triggers showTab(). Each tab is only
+   drawn when opened, and redrawn on resize or a light/dark change.
+   ============================================================================ */
 /* ---- Tabs (hash routing so each tab can be linked or embedded directly) ---- */
 const TABS = ["overview","explore","species","data"];
 let current = "";
@@ -581,6 +752,11 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", rerender
 new MutationObserver(rerender).observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
 showTab();
 
+/* ============================================================================
+   LOADING THE DATA (runs as soon as the page opens)
+   Downloads the three CSVs from the same folder, then calls load(). If they can't
+   be found, a box appears for choosing the files by hand.
+   ============================================================================ */
 /* ---- Loading ---- */
 function notice(h){ $("noticeText").innerHTML = h; $("notice").hidden = false; }
 Promise.all(Object.values(FILES).map(f => fetch(f, { cache:"no-cache" }).then(r => { if (!r.ok) throw new Error(f); return r.text(); })))

@@ -3,17 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+================================================================================
+  SWARMatlas MAP  (index.html)  -  READ ME FIRST
+================================================================================
+  WHAT THIS FILE IS
+  One self-contained web page. It has three parts, in this order:
+    1. STYLE section             how things LOOK (colours, fonts, sizes, layout)
+    2. HTML                      what is ON the page (header, side panel, map box)
+    3. SCRIPT section            what things DO (load data, draw markers, filters)
+
+  WHERE THE DATA COMES FROM
+  The page reads three CSV files that sit in the same folder on GitHub:
+    institutions.csv   contributors.csv   datasets.csv
+  These are the purple web_ tabs of the spreadsheet saved as CSV. The page joins
+  them using the ID columns:  dataset -> contributor_id -> institution_id.
+  To update the map you only replace the CSVs. You never need to edit this file.
+
+  OUTSIDE SERVICES IT USES (all free)
+    - Leaflet (cdnjs.cloudflare.com)   the mapping toolkit that draws the map
+    - PapaParse (cdnjs)                reads the CSV files
+    - Esri map tiles                   the grey map and the satellite imagery
+    - ECharts world outline (jsdelivr) a backup map, only shown if Esri can't load
+    - Google Fonts                     the IBM Plex typefaces
+
+  HOW TO MAKE COMMON CHANGES  (search this file for the words in CAPITALS)
+    - Change a colour .................. edit the --names in ":root" (CSS section).
+                                         Change it in ALL THREE colour blocks
+                                         (light, and the two dark-mode blocks).
+    - Change animal-group colours ...... --fish, --bird, --mammal, --insect, --invert
+    - Change the page title ............ the <h1> line in the HTML section
+    - Change wording on the page ....... the HTML section (side panel labels etc.)
+    - Change what a popup shows ........ function dsBlock (datasets) or
+                                         function instPopup (institutions)
+    - Change the starting view ......... "setView([25, 10], 2)"  = [lat, lon], zoom
+    - Add/remove a map style ........... const BASEMAPS
+    - Rename the CSV files ............. const FILES
+
+  HOW TO TEST A CHANGE SAFELY
+  Edit a copy, upload it to GitHub, and check the live page. If anything breaks,
+  open the repository's History (the clock icon on index.html) and restore the
+  previous version - GitHub keeps every version you have ever uploaded.
+================================================================================
+-->
 <title>SWARMatlas Data Map</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
 /* Layout: one-screen app for embedding. Header with view switch + counts; filter/list panel left, map right; stacks on narrow screens. */
+/* ----------------------------------------------------------------------------
+   COLOURS AND FONTS ("design tokens")
+   Every colour on the page is defined once here as a --name and used everywhere
+   else as var(--name). This block is the LIGHT theme. The two blocks after it
+   repeat the same names with DARK-theme values (one for visitors whose device
+   is set to dark mode, one for sites that force dark mode). If you change a
+   colour, change it in all three blocks.
+     --bg / --panel ......... page background / white panels
+     --fg / --muted ......... main text / grey secondary text
+     --line ................. thin divider lines
+     --accent ............... teal used for buttons and highlights
+     --sea / --land ......... colours of the backup map (only seen if Esri fails)
+     --fish ... --other ..... animal-group colours (checked for colour-blind readers)
+     --f-display/body/mono .. the three fonts (headings / text / numbers)
+   ---------------------------------------------------------------------------- */
 :root{
   --bg:#f4f6f6; --panel:#ffffff; --fg:#17262b; --muted:#5b6b70; --line:#d9e0e1;
   --accent:#0f6b6e; --accent-soft:#dcefee; --sea:#c9dde4; --land:#f5f4ef; --border-land:#a9b5b3;
   --inst:#17262b; --inst-ring:#ffffff; --pending:#8a9a9e; --link:#0f6b6e; --shadow:0 2px 10px rgba(16,38,43,.14);
-  --fish:#2f7fd8; --bird:#d9822b; --mammal:#b04a5a; --insect:#5e9a2c; --invert:#8b5cd0; --other:#7d8a93;
+  --fish:#2a78d6; --bird:#eb6834; --mammal:#1baf7a; --insect:#eda100; --invert:#e87ba4; --other:#8a979c;
   --f-display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"IBM Plex Sans",Arial,Helvetica,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -22,13 +80,20 @@
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
   --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
   --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
-  --fish:#5ea3f0; --bird:#f0a24e; --mammal:#e07484; --insect:#86c250; --invert:#ad86ea; --other:#9aa7af; color-scheme:dark}}
+  --fish:#3987e5; --bird:#d95926; --mammal:#199e70; --insect:#c98500; --invert:#d55181; --other:#6d7c80; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
   --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
   --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
-  --fish:#5ea3f0; --bird:#f0a24e; --mammal:#e07484; --insect:#86c250; --invert:#ad86ea; --other:#9aa7af; color-scheme:dark}
+  --fish:#3987e5; --bird:#d95926; --mammal:#199e70; --insect:#c98500; --invert:#d55181; --other:#6d7c80; color-scheme:dark}
 
+/* ----------------------------------------------------------------------------
+   PAGE LAYOUT
+   .app  = whole page: header on top, main area below.
+   .main = two columns: side panel (aside, 320px wide) and the map (.mapwrap).
+   On narrow screens (phones, under 760px) the "@media (max-width:760px)" rule
+   further down stacks them: map on top, list underneath.
+   ---------------------------------------------------------------------------- */
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--f-body);margin:0}
 *,*::before,*::after{box-sizing:border-box}
@@ -80,6 +145,9 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
 .btn{display:inline-block;margin-top:8px;font:500 13px var(--f-body);background:var(--accent);color:var(--panel);border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
 .unmapped{padding:8px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
 
+/* The rules below style the pop-up boxes that open when you click a marker
+   (.pop ...), the Simple/Satellite switch (.basemaps), and country names on the
+   backup map (.ctry). */
 /* popups */
 .pop h3{font:600 15px/1.25 var(--f-display);margin:0 0 3px}
 .pop .meta{color:var(--muted);font-size:12.5px;margin-bottom:6px}
@@ -121,6 +189,13 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+/* ----------------------------------------------------------------------------
+   LEAFLET'S OWN STYLES - you should not need to edit anything from here down to
+   the end of the style section. Leaflet normally ships these in a separate
+   file; they are copied in here so the page is self-contained. The last few
+   rules (.mk-i, .mk-d) are ours: they draw the institution diamonds (.mk-i)
+   and the dataset dots (.mk-d).
+   ---------------------------------------------------------------------------- */
 /* Leaflet 1.9 core (inlined) */
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
 .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;font:13px/1.4 var(--f-body)}
@@ -179,6 +254,18 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
 <body>
 
 
+<!-- ============================================================================
+     HTML: WHAT IS ON THE PAGE
+     header ........ title, the Institutions / Datasets switch, and the counts
+     aside ......... the side panel. It holds TWO sets of controls:
+                       #fInstView  shown in the Institutions view (search, tick-box)
+                       #fDsView    shown in the Datasets view (filters)
+                     then the scrolling list (#rows) and the colour key (#legend).
+     .mapwrap ...... the map itself (#map), plus a notice box that only appears
+                     if the CSV files cannot be found.
+     Most of the content (list rows, counts, legend) is filled in by the script,
+     so these elements look empty here - that is expected.
+     ============================================================================ -->
 <div class="app">
   <header>
     <div class="titlewrap">
@@ -235,17 +322,45 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
   </div>
 </div>
 
+<!-- The two libraries the script needs. The version numbers are fixed on purpose
+     so the page never changes unexpectedly; only update them deliberately. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 (function(){
 "use strict";
+/* ============================================================================
+   THE SCRIPT - what happens when the page opens, in order:
+     1. Set up the map and the Simple/Satellite basemaps          ("Map" section)
+     2. Download the three CSV files                              ("Loading", at the end)
+     3. Join them up and work out where each dataset goes         (function load)
+     4. Build the filter buttons from the data                    (function buildFilters)
+     5. Draw the current view: markers, list, legend, counts      (function render)
+   After that, every click (a filter, a tab, a search box) updates "state" and
+   calls render() again, which redraws everything to match.
+   The whole script is wrapped in (function(){ ... })(); so none of its names
+   clash with anything else on the page.
+   ============================================================================ */
+
+/* GROUPS: the animal groups, in the order used for filters, legends and colours.
+   GROUP_VAR: which colour (--name from the CSS) each group uses. Groups not
+   listed here (Reptile, Amphibian, Other) use the grey --other.
+   LAB: decides whether a dataset counts as "lab" (drawn as a ring, not a dot). */
 /* ---- Files this page reads (save the purple web_ tabs of the spreadsheet as these) ---- */
 const FILES = { institutions:"institutions.csv", contributors:"contributors.csv", datasets:"datasets.csv" };
 const GROUPS = ["Fish","Bird","Mammal","Insect","Other invertebrate","Reptile","Amphibian","Other"];
 const GROUP_VAR = {"Fish":"--fish","Bird":"--bird","Mammal":"--mammal","Insect":"--insect","Other invertebrate":"--invert"};
 const LAB = s => /^lab/i.test(s||"");
 
+/* Small helper tools used throughout:
+     $(id)       get an element on the page by its id
+     esc(text)   make text safe to put into the page (stops stray < > & breaking it)
+     num(v)      turn a CSV value into a number ("" becomes "not a number")
+     css(name)   read a colour from the CSS, e.g. css("--fish")
+     doiUrl(v)   turn "10.1234/abc" into a clickable https://doi.org/ link
+     safeUrl(u)  only allow web links starting http(s)://
+     isDark()    is the page currently in dark mode?
+     plural(n,w) "1 dataset" / "3 datasets" */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const s = String(v ?? "").trim(); return s === "" ? NaN : parseFloat(s.replace(",", ".")); };
@@ -256,6 +371,14 @@ const safeUrl = u => /^https?:\/\//i.test(String(u||"").trim()) ? String(u).trim
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
 const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
+/* ============================================================================
+   MAP SET-UP
+   L.map("map", ...) creates the map inside <div id="map">.
+     minZoom:2          stops visitors zooming out further than the whole world
+     worldCopyJump      lets the map wrap round smoothly at the date line
+     setView([25,10],2) the starting centre (latitude 25, longitude 10) and zoom.
+                        The map then zooms to fit the data once it has loaded.
+   ============================================================================ */
 /* ---- Map ---- */
 const map = L.map("map", { worldCopyJump:true, minZoom:2 }).setView([25, 10], 2);
 map.attributionControl.setPrefix(false);
@@ -264,6 +387,15 @@ map.attributionControl.setPrefix(false);
    Each style uses Esri's maintained basemap plus its matching borders-and-names overlay.
    The drawn Natural Earth outline is only a backup, shown while a style's tiles haven't loaded (or can't). */
 [["land",150],["borders",250],["labels",260]].forEach(([n,z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; map.getPane(n).style.pointerEvents = "none"; });
+/* BASEMAPS - the map styles in the corner switch. Each entry has:
+     label      the button text
+     base       the background map tiles (Esri)
+     ref        an overlay with Esri's borders and place names
+     maxNative  the most detailed zoom level Esri has for that style
+     credit     the attribution shown bottom-right (Esri requires this)
+   To ADD a style, copy an entry and change its Esri service name (Esri lists its
+   free basemaps at services.arcgisonline.com). To REMOVE one, delete its entry.
+   The visitor's last choice is remembered in their browser (localStorage). */
 const ESRI = s => `https://server.arcgisonline.com/ArcGIS/rest/services/${s}/MapServer/tile/{z}/{y}/{x}`;
 const BASEMAPS = {
   simple:   { label:"Simple",
@@ -278,6 +410,21 @@ try { const s = localStorage.getItem("swarmatlas-basemap"); if (BASEMAPS[s]) bas
 let baseTiles = null, refTiles = null, tilesLoaded = false;
 let landLayer = null, borderLayer = null, labelLayer = null, COUNTRIES = null;
 
+/* ============================================================================
+   BACKUP MAP OUTLINE (you are unlikely to need to touch this section)
+   If the Esri tiles cannot load (e.g. a blocked network or a preview window), the
+   page draws its own simple world map so it is never blank. It downloads a
+   public-domain country outline (Natural Earth data, via the ECharts library),
+   trying three sources in turn. The functions below:
+     decodeRing / decodeGeo   unpack ECharts' compressed outline format
+     unwrapRing               fixes shapes that cross the 180-degree date line
+                              (otherwise they draw as stripes across the map)
+     ringArea / ringCentroid  find each country's size and middle, for its label
+     prepareCountries         drops Antarctica, copies the world either side so
+                              panning wraps, and works out label positions
+     LABEL_FIX                hand-placed label positions for countries whose
+                              calculated middle looks odd (e.g. USA, Russia)
+   ============================================================================ */
 /* ---- Backup outline: Natural Earth countries (via Apache ECharts' packaged copy, or world-atlas) ---- */
 function decodeRing(str, off, sc){ const o=[]; let px=off[0], py=off[1];
   for (let i=0;i<str.length;i+=2){ let x=str.charCodeAt(i)-64, y=str.charCodeAt(i+1)-64; x=(x>>1)^(-(x&1)); y=(y>>1)^(-(y&1)); x+=px; y+=py; px=x; py=y; o.push([x/sc,y/sc]); } return o; }
@@ -321,6 +468,9 @@ loadEcharts("https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js")
   .then(geo => { COUNTRIES = prepareCountries(geo); buildBackup(); showBackup(!tilesLoaded); })
   .catch(e => console.warn("No backup outline could be loaded", e));
 
+/* buildBackup draws the backup land, borders and country names.
+   showBackup(true/false) shows or hides them. updateLabels shows more country
+   names as you zoom in: only big countries at world zoom, all of them close up. */
 function backupStyle(){
   if (basemap === "satellite") return { cls:"on-dark" };
   return { cls:"" };
@@ -347,6 +497,14 @@ function updateLabels(){
 }
 map.on("zoomend", updateLabels);
 
+/* ============================================================================
+   SWITCHING MAP STYLE
+   applyBasemap() removes the old tiles, adds the chosen style's tiles, and shows
+   the backup map until the first real tile arrives (then hides it). If tiles keep
+   failing, a short note appears under the switch.
+   BaseControl builds the Simple / Satellite buttons in the top-right corner.
+   restyle redraws everything if the visitor's device switches light/dark mode.
+   ============================================================================ */
 /* ---- Basemap switching ---- */
 const tileNote = document.createElement("div");
 function applyBasemap(){
@@ -376,8 +534,20 @@ applyBasemap();
 const restyle = () => { buildBackup(); applyBasemap(); render(); };
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", restyle);
 new MutationObserver(restyle).observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+/* Three layers that hold our markers: institutions, datasets, and the dashed
+   lines drawn from datasets to their institution. Only the layers for the
+   current view are on the map at any time. */
 const instLayer = L.layerGroup().addTo(map), dsLayer = L.layerGroup(), linkLayer = L.layerGroup();
 
+/* ============================================================================
+   DATA
+   INST  every institution, by ID (with lists of its people and datasets)
+   CON   every contributor, by ID
+   DS    every dataset (a list)
+   state remembers what the visitor has chosen: which view, search text, which
+         filter buttons are on, and whether we are showing one institution only.
+   rows(text) turns a CSV file into a list of rows, using the column headers.
+   ============================================================================ */
 /* ---- Data ---- */
 let INST = new Map(), CON = new Map(), DS = [];
 const state = { view:"inst", iText:"", iOnly:false, group:new Set(), setting:new Set(), method:"", dText:"", inst:"" };
@@ -385,6 +555,14 @@ const state = { view:"inst", iText:"", iOnly:false, group:new Set(), setting:new
 function rows(text){ return Papa.parse(text, { header:true, skipEmptyLines:"greedy" }).data.map(r => {
   const o = {}; for (const k in r) o[String(k).replace(/^﻿/,"").trim()] = typeof r[k] === "string" ? r[k].trim() : r[k]; return o; }); }
 
+/* load() is called once the three CSVs have downloaded. It:
+     - reads institutions (needs institution_id, name, lat, lon)
+     - reads contributors and attaches each to its institution
+     - reads datasets, links each to its contributor and institution, and works
+       out where to draw it: at site_lat/site_lon if given, otherwise at the
+       institution (atInst = true, e.g. lab studies)
+   The column names it uses (r.title, r.binomial_name, ...) must match the CSV
+   headers exactly. If you rename a column in the spreadsheet, rename it here too. */
 function load(instText, conText, dsText){
   INST = new Map(); CON = new Map(); DS = [];
   rows(instText).forEach(r => { const lat = num(r.lat), lon = num(r.lon); if (!r.institution_id) return;
@@ -407,6 +585,13 @@ function load(instText, conText, dsText){
   buildFilters(); buildInstMarkers(); render(); fitTo(state.view === "inst" ? instPoints() : dsPoints());
 }
 
+/* ============================================================================
+   FILTERS (Datasets view)
+   chip() makes one round filter button. buildFilters() creates the animal-group
+   and setting buttons from whatever values are in the data, so new groups or
+   settings appear automatically. dsVisible(d) and instVisible(i) decide whether a
+   dataset / institution passes the current filters and search.
+   ============================================================================ */
 /* ---- Filters ---- */
 function chip(box, key, value, n, sw){
   const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed","true");
@@ -437,6 +622,12 @@ const dsVisible = d => state.group.has(d.group) && state.setting.has(d.setting) 
 const instVisible = i => !isNaN(i.lat) && (!state.iOnly || i.ds.length) &&
   (!state.iText || [i.name, i.country, ...i.people.map(p => p.name)].join(" ").toLowerCase().includes(state.iText));
 
+/* ============================================================================
+   SWITCHING VIEW (Institutions <-> Datasets)
+   setView() swaps the side-panel controls and the marker layers, then redraws.
+   "View their datasets" in an institution popup calls showInstDatasets(), which
+   switches to the Datasets view filtered to that one institution.
+   ============================================================================ */
 /* ---- Views ---- */
 function setView(v){
   state.view = v;
@@ -457,6 +648,12 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-goto-inst]"); if (b) { const i = INST.get(b.dataset.gotoInst); if (i){ setView("inst"); map.flyTo([i.lat,i.lon], Math.max(map.getZoom(),5), {duration:.7}); map.once("moveend", () => i.marker && i.marker.openPopup()); } }
 });
 
+/* ============================================================================
+   INSTITUTIONS VIEW
+   instIcon     the diamond marker; bigger for more datasets, outlined if none yet
+   instPopup    WHAT THE INSTITUTION POP-UP SAYS. Contributors without a public name
+                are counted as "further contributors" rather than named.
+   ============================================================================ */
 /* ---- Institutions ---- */
 const instIcon = (i, hl) => { const s = Math.min(22, 11 + Math.sqrt(i.ds.length) * 3);
   return L.divIcon({ className:`mk-i${i.ds.length ? "" : " pending"}${hl ? " hl" : ""}`, html:`<i style="width:${s}px;height:${s}px;margin:${(26-s)/2}px"></i>`, iconSize:[26,26], iconAnchor:[13,13] }); };
@@ -480,6 +677,16 @@ function buildInstMarkers(){
 }
 const instPoints = () => [...INST.values()].filter(instVisible).map(i => [i.lat, i.lon]);
 
+/* ============================================================================
+   DATASETS VIEW
+   dsBlock      WHAT THE DATASET POP-UP SAYS (species, contributor, method, paper...).
+                Each line is only shown if that information exists.
+   dsIcon       the round marker, coloured by animal group; a ring for lab studies;
+                shows a number when several datasets share one place.
+   drawDatasets groups datasets at the same coordinates into one marker, so they
+                don't hide each other, and draws the dashed lines when one
+                institution is selected.
+   ============================================================================ */
 /* ---- Datasets (grouped by shared location) ---- */
 function dsBlock(d){
   const sp = d.common || d.binomial ? `${esc(d.common)}${d.common && d.binomial ? " · " : ""}${d.binomial ? `<i>${esc(d.binomial)}</i>` : ""}` : "Not given";
@@ -524,6 +731,13 @@ function drawDatasets(shown){
 }
 const dsPoints = () => DS.filter(d => d.mapped && dsVisible(d)).flatMap(d => state.inst && d.inst && !isNaN(d.inst.lat) ? [[d.lat,d.lon],[d.inst.lat,d.inst.lon]] : [[d.lat,d.lon]]);
 
+/* ============================================================================
+   DRAWING THE PAGE
+   counts()  the numbers in the header (datasets, species, contributors...)
+   render()  redraws the current view: which markers are visible, the list in the
+             side panel, and the colour key. Called after every change.
+   fitTo()   zooms the map to fit a set of points.
+   ============================================================================ */
 /* ---- Render ---- */
 function counts(){
   const species = new Set(DS.map(d => d.binomial.toLowerCase()).filter(Boolean)).size;
@@ -574,6 +788,13 @@ function render(){
 }
 function fitTo(pts){ if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding:[40,40], maxZoom:6 }); }
 
+/* ============================================================================
+   LOADING THE DATA (this runs as soon as the page opens)
+   Downloads the three CSVs from the same folder as this page, then calls load().
+   cache:"no-cache" makes sure visitors get the newest CSVs after you update them.
+   If the files can't be found (e.g. the page was opened straight from a computer),
+   a box appears letting you pick the three CSV files by hand instead.
+   ============================================================================ */
 /* ---- Loading ---- */
 function notice(html){ $("noticeText").innerHTML = html; $("notice").hidden = false; }
 Promise.all(Object.values(FILES).map(f => fetch(f, { cache:"no-cache" }).then(r => { if (!r.ok) throw new Error(f); return r.text(); })))
