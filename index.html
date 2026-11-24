@@ -76,12 +76,12 @@
   --f-body:"IBM Plex Sans",Arial,Helvetica,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]):not([data-embed]){
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
   --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
   --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
   --fish:#3987e5; --bird:#d95926; --mammal:#199e70; --insect:#c98500; --invert:#d55181; --other:#6d7c80; color-scheme:dark}}
-:root[data-theme="dark"]{
+:root[data-theme="dark"]:not([data-embed]){
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --muted:#93a4a8; --line:#273639;
   --accent:#5cc3c0; --accent-soft:#1c3638; --sea:#0a1113; --land:#24312f; --border-land:#3f5250;
   --inst:#e4ecec; --inst-ring:#0f1719; --pending:#6d8085; --link:#5cc3c0; --shadow:0 2px 12px rgba(0,0,0,.5);
@@ -148,6 +148,19 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
 /* The rules below style the pop-up boxes that open when you click a marker
    (.pop ...), the Simple/Satellite switch (.basemaps), and country names on the
    backup map (.ctry). */
+/* EMBED VERSION (summary-map.html): the same page with data-embed="map" set on
+   <html>. It hides the side panel, title and counts, keeps the Institutions /
+   Datasets switch, always uses the light colours (to match Google Sites), and
+   shows a link to the full map. */
+.fullmap{display:none;font:600 13px var(--f-body);color:var(--link);text-decoration:none}
+.fullmap:hover{text-decoration:underline}
+:root[data-embed] .fullmap{display:inline}
+:root[data-embed] aside,:root[data-embed] h1,:root[data-embed] .counts{display:none}
+:root[data-embed] header{padding-block:8px}
+:root[data-embed] .main{grid-template-columns:1fr;grid-template-rows:1fr;overflow:hidden}
+:root[data-embed] .mapwrap{height:auto}
+:root[data-embed] [data-inst-ds]{display:none}
+
 /* popups */
 .pop h3{font:600 15px/1.25 var(--f-display);margin:0 0 3px}
 .pop .meta{color:var(--muted);font-size:12.5px;margin-bottom:6px}
@@ -276,6 +289,7 @@ select,input[type=search]{width:100%;font:14px var(--f-body);color:var(--fg);bac
       </div>
     </div>
     <div class="counts" aria-live="polite" id="counts"></div>
+    <a class="fullmap" href="index.html" target="_blank" rel="noopener">Open the full map ↗</a>
   </header>
   <div class="main">
     <aside>
@@ -368,7 +382,7 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const colorOf = g => css(GROUP_VAR[g] || "--other");
 const doiUrl = v => { v = String(v||"").trim(); if (!v) return ""; if (/^https?:\/\//i.test(v)) return v; if (/^10\.\d{4,}\//.test(v)) return "https://doi.org/" + v; return ""; };
 const safeUrl = u => /^https?:\/\//i.test(String(u||"").trim()) ? String(u).trim() : "";
-const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+const isDark = () => { if (document.documentElement.dataset.embed) return false; const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
 const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 /* ============================================================================

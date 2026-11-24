@@ -83,12 +83,12 @@
   --f-body:"IBM Plex Sans",Arial,Helvetica,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]):not([data-embed]){
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --fg2:#bccacc; --muted:#93a4a8; --line:#273639; --track:#1c2a2e;
   --accent:#5cc3c0; --accent-soft:#1c3638; --link:#5cc3c0; --shadow:none;
   --seq0:#1a2a33; --seq1:#3987e5; --bar:#3987e5;
   --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --cother:#6d7c80; color-scheme:dark}}
-:root[data-theme="dark"]{
+:root[data-theme="dark"]:not([data-embed]){
   --bg:#0f1719; --panel:#152024; --fg:#e4ecec; --fg2:#bccacc; --muted:#93a4a8; --line:#273639; --track:#1c2a2e;
   --accent:#5cc3c0; --accent-soft:#1c3638; --link:#5cc3c0; --shadow:none;
   --seq0:#1a2a33; --seq1:#3987e5; --bar:#3987e5;
@@ -141,6 +141,19 @@ section[hidden]{display:none}
 
 /* Bar charts are built from ordinary boxes (not images): a label, a track with
    coloured segments inside, and the total. .seg is one coloured segment. */
+/* EMBED VERSIONS (summary-numbers / summary-pie-charts / summary-growth-and-country):
+   the same page with data-embed="numbers" | "pies" | "growth" set on <html>. Each
+   shows only its part of the Overview, with no header or tabs, light colours only
+   (to match Google Sites) and a white background. */
+:root[data-embed]{--bg:#ffffff}
+:root[data-embed] header,:root[data-embed] body::before{display:none}
+:root[data-embed] main{padding-block:4px}
+:root[data-embed] #tiles2{margin-bottom:4px}
+:root[data-embed="numbers"] #ovPies,:root[data-embed="numbers"] #ovGC,
+:root[data-embed="pies"] .tiles,:root[data-embed="pies"] #ovGC,
+:root[data-embed="growth"] .tiles,:root[data-embed="growth"] #ovPies{display:none}
+:root[data-embed="growth"] #ovGC{margin-top:0!important}
+
 /* horizontal bars */
 .hbars{display:grid;grid-template-columns:minmax(90px,max-content) 1fr auto;gap:6px 10px;align-items:center}
 .hbars .l{font-size:13px;color:var(--fg2);overflow-wrap:anywhere;display:flex;align-items:center;gap:8px}
@@ -244,12 +257,12 @@ svg text{fill:var(--muted);font:11px var(--f-body)}
   <section id="tab-overview">
     <div class="tiles t4" id="tiles"></div>
     <div class="tiles t3" id="tiles2"></div>
-    <div class="grid g3">
+    <div class="grid g3" id="ovPies">
       <div class="card"><h2>Animal group</h2><p class="cap">Share of datasets in the atlas.</p><div id="ovGroup"></div></div>
       <div class="card"><h2>Tracking method</h2><p class="cap">How the movement data were collected.</p><div id="ovMethod"></div></div>
       <div class="card"><h2>Field and lab</h2><p class="cap">Where the data were collected.</p><div id="ovSetting"></div></div>
     </div>
-    <div class="grid g2" style="margin-top:16px">
+    <div class="grid g2" id="ovGC" style="margin-top:16px">
       <div class="card"><h2>Growth of the atlas</h2><p class="cap" id="growthCap">Datasets added over time.</p><div id="ovGrowth"></div></div>
       <div class="card"><h2>Datasets by country</h2><p class="cap">Country of the contributor's institution.</p><div id="ovCountry"></div></div>
     </div>
@@ -738,7 +751,7 @@ $("tDownload").onclick = () => {
 const TABS = ["overview","explore","species","data"];
 let current = "";
 function showTab(){
-  const t = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "overview";
+  const t = document.documentElement.dataset.embed ? "overview" : (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "overview");
   TABS.forEach(k => $("tab-" + k).hidden = k !== t);
   document.querySelectorAll("nav a").forEach(a => { if (a.dataset.tab === t) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   current = t; if (DS.length) renderTab(t);
