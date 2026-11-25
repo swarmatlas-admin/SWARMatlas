@@ -50,7 +50,8 @@
                                          (first number = left/right, second =
                                          up/down; e.g. "center 70%" shows lower down)
     - Change the speed ................. SECONDS_PER_SLIDE in the script
-    - Links open in a new tab? ......... LINK_TARGET in the script (see note there)
+    - Where buttons open ............... LINK_TARGET in the script (new tab, because
+                                         Google Sites blocks links that replace the page)
     - Photo credits .................... the small line at the top of each slide
     - Rounded "card" look .............. add ?card to the embed address
                                          (and &bg=colourcode to match the page),
@@ -116,7 +117,11 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
   background:rgba(8,20,24,.35);color:#fff;display:grid;place-items:center;opacity:.75;transition:opacity .2s,background .2s}
 .arrow:hover,.arrow:focus-visible{opacity:1;background:rgba(8,20,24,.6)}
 .arrow:focus-visible{outline:3px solid var(--accent)}
-.prev{right:calc(max(16px,env(safe-area-inset-right,0px)) + 50px)}
+.prev{right:calc(max(16px,env(safe-area-inset-right,0px)) + 100px)}
+.pause{right:calc(max(16px,env(safe-area-inset-right,0px)) + 50px)}
+.pause .i-play{display:none}
+.pause[aria-pressed="true"] .i-pause{display:none}
+.pause[aria-pressed="true"] .i-play{display:block}
 .next{right:max(16px,env(safe-area-inset-right,0px))}
 .dots{position:absolute;z-index:3;left:max(28px,env(safe-area-inset-left,0px));bottom:26px;display:flex;gap:8px}
 .dots button{width:28px;height:4px;border:0;padding:0;border-radius:2px;background:var(--dot);cursor:pointer;position:relative;overflow:hidden}
@@ -133,8 +138,9 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
 :root[data-card] .stage{border-radius:18px;isolation:isolate}
 
 @media (max-width:640px){
+  .arrow.pause{display:grid;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;width:38px;height:38px}
   :root[data-card] .stage{border-radius:12px}
-  .arrow{display:none}
+  .arrow:not(.pause){display:none}
   .copy{padding-block:0 54px}
   .copy p{margin-bottom:16px}
 }
@@ -161,8 +167,8 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
     <div class="copy">
       <span class="eyebrow">Now live</span>
       <h2>SWARMatlas is live!</h2>
-      <p>A new home for collective movement data, from fish schools and bird flocks to herds and swarms. Explore what we've gathered so far.</p>
-      <a class="btn" href="https://www.swarmatlas.co.uk/explore-the-data">Explore the data <span aria-hidden="true">→</span></a>
+      <p>A new database for collective movement data, from fish schools and bird flocks to herds and swarms. Meet the people behind it.</p>
+      <a class="btn" href="https://www.swarmatlas.co.uk/team-partners">Meet the team <span aria-hidden="true">→</span></a>
     </div>
     <div class="credit">Photo: Rhys Kentish / Unsplash</div>
   </article>
@@ -183,7 +189,7 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
     <div class="copy">
       <span class="eyebrow">About</span>
       <h2>One atlas for animals that move together</h2>
-      <p>We gather tracking data from animal groups in one place, so collective movement can be compared across species, environments and methods.</p>
+      <p>We gather tracking data from animal groups in one place, so collective movement can be compared.</p>
       <a class="btn" href="https://www.swarmatlas.co.uk/about">About SWARMatlas <span aria-hidden="true">→</span></a>
     </div>
     <div class="credit">Photo: Thomas Hoang / Unsplash</div>
@@ -201,7 +207,7 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
         <div><b data-stat="contributors">–</b><span>Contributors</span></div>
         <div><b data-stat="countries">–</b><span>Countries</span></div>
       </div>
-      <a class="btn" href="https://www.swarmatlas.co.uk/explore-the-data">See the full picture <span aria-hidden="true">→</span></a>
+      <a class="btn" href="https://www.swarmatlas.co.uk/faq">Have questions? <span aria-hidden="true">→</span></a>
     </div>
     <div class="credit">Photo: Diljot Singh / Unsplash</div>
   </article>
@@ -212,12 +218,13 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
       <span class="eyebrow">Featured dataset</span>
       <h2>Homing pigeon flocks</h2>
       <p>GPS tracks of 19 homing pigeons flying in two flocks in Switzerland, used to ask whether the same birds lead the flock every time. <cite>Santos et al. (2014)</cite></p>
-      <a class="btn" href="https://swarmatlas-admin.github.io/SWARMatlas/explore.html#species" data-external>See the species page <span aria-hidden="true">→</span></a>
+      <a class="btn" href="https://www.swarmatlas.co.uk/contribute">Contribute <span aria-hidden="true">→</span></a>
     </div>
     <div class="credit">Photo: Shakeb Tawheed / Pexels</div>
   </article>
 
   <button class="arrow prev" type="button" aria-label="Previous slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="arrow pause" type="button" aria-label="Pause slideshow" aria-pressed="false"><svg class="i-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg class="i-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></button>
   <button class="arrow next" type="button" aria-label="Next slide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
   <div class="dots" role="group" aria-label="Choose slide"></div>
 </main>
@@ -227,17 +234,18 @@ body{margin:0;background:#0b1618;color:var(--ink);font:15px/1.5 var(--f-body);ov
 "use strict";
 /* ---- Settings ---- */
 const SECONDS_PER_SLIDE = 7;
-/* LINK_TARGET: where buttons open. "_top" replaces the whole Google Sites page (best
-   for links to your own site). If clicking a button does nothing once embedded,
-   change this to "_blank" so links open in a new tab instead. Buttons marked
-   data-external (links to GitHub pages) always open in a new tab. */
-const LINK_TARGET = "_top";
+/* LINK_TARGET: where buttons open. Google Sites blocks embeds from changing the page
+   they sit in ("_top"), so buttons open in a new tab ("_blank"). */
+const LINK_TARGET = "_blank";
 
 const stage = document.getElementById("stage");
 let slides = [...stage.querySelectorAll(".slide")];
 const dotsBox = stage.querySelector(".dots");
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let i = 0, timer = null, start = 0, paused = false, raf = 0;
+/* userPaused = the visitor pressed the pause button. Visitors whose device asks for
+   reduced motion start paused and can press play. */
+let userPaused = reduced;
 
 /* Links */
 stage.querySelectorAll(".btn").forEach(a => { a.target = a.hasAttribute("data-external") ? "_blank" : LINK_TARGET; if (a.target === "_blank") a.rel = "noopener"; });
@@ -291,7 +299,7 @@ function go(k){
    and is off entirely for visitors who ask their device for reduced motion. */
 function tick(t){
   if (!start) start = t;
-  if (paused){ start = t - (dots[i].style.getPropertyValue("--p") || 0) * SECONDS_PER_SLIDE * 1000; }
+  if (paused || userPaused){ start = t - (dots[i].style.getPropertyValue("--p") || 0) * SECONDS_PER_SLIDE * 1000; }
   else {
     const p = Math.min(1, (t - start) / (SECONDS_PER_SLIDE * 1000));
     dots[i].style.setProperty("--p", p.toFixed(3));
@@ -302,10 +310,14 @@ function tick(t){
 function restart(){ start = 0; }
 stage.querySelector(".prev").onclick = () => { go(i - 1); restart(); };
 stage.querySelector(".next").onclick = () => { go(i + 1); restart(); };
+const pauseBtn = stage.querySelector(".pause");
+function setPaused(on){ userPaused = on; pauseBtn.setAttribute("aria-pressed", on); pauseBtn.setAttribute("aria-label", on ? "Play slideshow" : "Pause slideshow"); }
+pauseBtn.onclick = () => setPaused(!userPaused);
+setPaused(userPaused);
 stage.addEventListener("keydown", e => { if (e.key === "ArrowRight"){ go(i + 1); restart(); } if (e.key === "ArrowLeft"){ go(i - 1); restart(); } });
 /* Pause only while the pointer is over the text, buttons or controls (not the whole
    banner, where a resting mouse would otherwise stop it for good). */
-stage.querySelectorAll(".copy, .arrow, .dots").forEach(el => {
+stage.querySelectorAll(".copy, .arrow, .dots").forEach(el => {  // .arrow includes the pause button
   el.addEventListener("mouseenter", () => paused = true);
   el.addEventListener("mouseleave", () => paused = false);
 });
@@ -318,7 +330,7 @@ stage.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, { pass
 stage.addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40){ go(i + (dx < 0 ? 1 : -1)); restart(); } x0 = null; });
 
 go(0);
-if (!reduced) raf = requestAnimationFrame(tick);
+raf = requestAnimationFrame(tick);
 })();
 </script>
 
